@@ -1,8 +1,8 @@
 #include <Adafruit_TinyUSB.h>
 #define BLINK_INTERVAL_MS  1000UL  // 1 second on, 1 second off → 1 Hz
-#define LED_RED 8
-#define LED_GREEN 9
-#define LED_BLUE 10
+//#define NEW_LED_RED 8
+//#define NEW_LED_GREEN 9
+//#define NEW_LED_BLUE 10
 
 // ------------------------------------------------------------
 //  Global variables for Task 1 ii) and beyond
@@ -38,7 +38,10 @@ void colorSelector(int c){
 
 void setup() {
   Serial.begin(115200);
-  while (!Serial);
+  unsigned long start = millis();
+  while (!Serial && millis() - start < 3000) {
+    // waiting 3 seconds max
+  }
   // Set LED pins as outputs.
   // pinMode(pin, OUTPUT) configures a pin for digital output
   // Start with all LEDs off (active-low → HIGH = off)
@@ -58,12 +61,12 @@ void loop() {
   //  Comment this section out once you move on to Task 1 ii).
   // ----------------------------------------------------------
   
-  // digitalWrite(LED_RED, LOW);
-  // led_on = true;
-  // delay(1000);
-  // digitalWrite(LED_RED, HIGH);
-  // led_on = false;
-  // delay(1000);
+  //digitalWrite(LED_RED, LOW);
+  //led_on = true;
+  //delay(1000);
+  //digitalWrite(LED_RED, HIGH);
+  //led_on = false;
+  //delay(1000);
 
   // ----------------------------------------------------------
   //  Task 1 ii) — Blink using millis()  (comment out i) first)
