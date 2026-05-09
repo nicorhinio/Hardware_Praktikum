@@ -134,19 +134,29 @@ void display_values(uint16_t co2, uint16_t tvoc) {
   // TODO (Task 3): set cursor, print co2 and tvoc values.
   u8g2.clearBuffer();
 
-  u8g2.setCursor(0, 15);
-  u8g2.print("eCO2: ");
+  u8g2.setCursor(0, 10);
+  u8g2.print("eCO2:  ");
   u8g2.print(co2);
-  u8g2.print("ppm   TVOC: ");
+  u8g2.print("ppm");
+  u8g2.setCursor(0, 20);   
+  u8g2.print("TVOC: ");
   u8g2.print(tvoc);
   u8g2.print("ppb");
 
-  u8g2.sendBuffer();
+
 
   // TODO (Task 4): map co2 to pct (0-100), draw a filled bar with
   //                u8g2.drawBox(x, y, width, height).
   //                Bar width  = map(pct, 0, 100, 0, 128)
   //                Remember: constrain pct to [0, 100] before mapping.
+  long mapping = map(co2, 400, 2000, 0, 100);
+  mapping = constrain(mapping, 0, 100);
+  u8g2.setCursor(0, 30);
+  u8g2.print(mapping);
+  long bar_mapping = map(mapping, 0, 100, 0, 128);
+  u8g2.drawBox(0, 35, bar_mapping, 24);
+
+  u8g2.sendBuffer();
 }
 
 
@@ -196,7 +206,7 @@ void setup() {
 void loop() {
   // --- Task 2 iv.): Send measure command and read response ---
   // TODO: call sgp30_cmd() with the measure command bytes.
-  if (millis() - last_measurement >= 1000){
+  if (millis() - last_measurement >= 50){ //originally value was 1000, changed to 50ms for smoothing
   last_measurement = millis();
   sgp30_cmd(CMD_MEAS_MSB, CMD_MEAS_LSB);
   current = millis();
@@ -209,7 +219,7 @@ void loop() {
     Serial.println("Error 404.");
     return;
   }
-  
+
   // TODO: Reconstruct 16-bit values from the raw bytes ----
   processed_co2 = to_uint16(raw_co2_msb, raw_co2_lsb);
   processed_tvoc = to_uint16(raw_tvoc_msb, raw_tvoc_lsb);
