@@ -29,6 +29,7 @@ uint16_t processed_tvoc = 0;
 
 unsigned long last_measurement = 0;
 unsigned long current = 0;
+unsigned long start_up = 15;    // 15 second warm up for sensor
 // ------------------------------------------------------------
 //  Display constructor
 // ------------------------------------------------------------
@@ -153,6 +154,7 @@ void display_values(uint16_t co2, uint16_t tvoc) {
   mapping = constrain(mapping, 0, 100);
   u8g2.setCursor(0, 30);
   u8g2.print(mapping);
+  u8g2.print(" %");
   long bar_mapping = map(mapping, 0, 100, 0, 128);
   u8g2.drawBox(0, 35, bar_mapping, 24);
 
@@ -168,6 +170,19 @@ void setup() {
   // TODO: Transmit to each available I2C address, print the adress when receiving an ACK.
   //       You can use decimal adresses when sending but convert them to hex when printing them out.
   //       Use Serial.print(address, HEX) to make it easier.
+  u8g2.begin();
+
+  u8g2.setFont(u8g2_font_helvB08_tf);
+
+  u8g2.clearBuffer();
+
+  u8g2.drawStr(0, 20, "Hardware");
+  u8g2.drawStr(0, 40, "Praktikum 2026");
+  u8g2.sendBuffer();
+  delay(1000);
+
+  boot_animation();
+
   Wire.begin();
   uint8_t addr = 8;
   for(addr; addr < 128; addr++){
@@ -183,25 +198,123 @@ void setup() {
   // TODO: send the init command, wait for initialization
   //       and print out a message.
   sgp30_cmd(CMD_INIT_MSB, CMD_INIT_LSB);
-  delay(15000);
+  for(start_up; start_up > 0; start_up--){
+    u8g2.clearBuffer();
+    u8g2.setDrawColor(2);
+    u8g2.setCursor(0, 128);
+    u8g2.print(start_up);
+    u8g2.sendBuffer();
+    delay(1000);
+  }
   Serial.println("SPG30 initialized.");
  
 
   // --- Task 3 i.): Simple display use ---
   // TODO: initialize display, set a font, display "Hardware Praktikum 2026",
   //       and push it to the screen.
-  u8g2.begin();
+  u8g2.setDrawColor(1);
+}
 
-  u8g2.setFont(u8g2_font_helvB08_tf);
+void boot_animation() {
+
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_ncenB08_tr);
+
+  // --------------------------------------------------
+  // 1) Loading Bar Animation
+  // --------------------------------------------------
+
+  for (int w = 0; w <= 108; w += 6) {
+
+    u8g2.clearBuffer();
+
+    u8g2.drawFrame(8, 26, 112, 12);
+
+    u8g2.drawBox(10, 28, w, 8);
+
+    u8g2.setCursor(22, 18);
+    u8g2.print("Booting...");
+
+    u8g2.sendBuffer();
+
+    delay(35);
+  }
+
+  // --------------------------------------------------
+  // 2) Smooth title slide-in
+  // --------------------------------------------------
+
+  for (int x = 128; x > 8; x -= 6) {
+
+    u8g2.clearBuffer();
+
+    u8g2.setFont(u8g2_font_ncenB08_tr);
+
+    u8g2.drawStr(x, 26, "Hardware");
+
+    u8g2.drawStr(x, 48, "Praktikum");
+
+    u8g2.sendBuffer();
+
+    delay(25);
+  }
+
+  // --------------------------------------------------
+  // 3) Fade-like blink effect
+  // --------------------------------------------------
+
+  for (int i = 0; i < 2; i++) {
+
+    u8g2.clearBuffer();
+    u8g2.sendBuffer();
+    delay(60);
+
+    u8g2.clearBuffer();
+
+    u8g2.drawStr(8, 26, "Hardware");
+    u8g2.drawStr(8, 48, "Praktikum");
+
+    u8g2.sendBuffer();
+
+    delay(60);
+  }
+
+  // --------------------------------------------------
+  // 4) Final screen
+  // --------------------------------------------------
 
   u8g2.clearBuffer();
 
-  u8g2.drawStr(0, 20, "Hardware");
-  u8g2.drawStr(0, 40, "Praktikum 2026");
+  // Outer frame
+  u8g2.drawRFrame(0, 0, 128, 64, 4);
+
+  // Title
+  u8g2.setFont(u8g2_font_ncenB08_tr);
+
+  u8g2.drawStr(10, 20, "Hardware");
+
+  u8g2.drawStr(10, 40, "Praktikum");
+
+  // Year
+  u8g2.setFont(u8g2_font_logisoso16_tr);
+
+  u8g2.drawStr(70, 58, "2026");
+
+  // Decorative line
+  u8g2.drawLine(8, 46, 118, 46);
+
+  // Credits
+  u8g2.setFont(u8g2_font_5x8_tr);
+
+  u8g2.drawStr(8, 58, "Daniel Zein");
+    
+  u8g2.drawStr(8, 8, "Nico");
+
 
   u8g2.sendBuffer();
-}
 
+  delay(5000);
+}
 
 void loop() {
   // --- Task 2 iv.): Send measure command and read response ---
