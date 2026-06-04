@@ -10,18 +10,27 @@
 #include <Arduino.h>
 
 int BUZZER_PIN = 29;
+int BUTTON_PIN = 3;
 bool buzzerState = false;
+bool buttonState = LOW;
 uint32_t freq = 1046;
 
 
 void setup() {
   NRF_P0->DIRSET = (1UL << BUZZER_PIN); // set GPIO as Output
+  pinMode(BUTTON_PIN, INPUT_PULLUP); // set Button
   setTimer1Freq();
+  NRF_TIMER1->TASKS_STOP = 1; // stop timer, so that no sound is played after setup
 }
 
 
 void loop() {
-
+  if(!(NRF_P0->IN & (1UL << BUTTON_PIN))){
+    setBuzzerFreq(1064);
+  }
+  else{
+    setBuzzerFreq(0);
+  }
 }
 
 
@@ -48,8 +57,18 @@ void setTimer1Freq() {
 
 
 
-void setBuzzerFreq() {
-
+void setBuzzerFreq(uint32_t newFreq) {
+  freq = newFreq;
+  if (newFreq == 0){
+    NRF_TIMER1->TASKS_STOP = 1;
+    NRF_P0->OUTCLR = (1UL << BUZZER_PIN);
+    return;
+  }
+  uint32_t compareValue = 1000000UL / (2 * freq);
+  NRF_TIMER1->TASKS_STOP = 1;
+  NRF_TIMER1->CC[0] = compareValue;
+  NRF_TIMER1->TASKS_CLEAR = 1;
+  NRF_TIMER1->TASKS_START = 1;
 }
 
 
