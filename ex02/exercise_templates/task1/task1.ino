@@ -7,11 +7,12 @@
 // ------------------------------------------------------------
 
 void setup() {
-NRF_P0->DIRSET = (1UL << 26);
+NRF_P0->DIRSET = (1UL << 26); // set pin 26 as Output
 }
 
 
 void loop() {
+  // Set freq to 1 Hz
   setP026(true);
   delay(500);
   setP026(false);
@@ -21,9 +22,9 @@ void loop() {
 
 void setP026(boolean high) {
   if (high){
-    NRF_P0->OUTSET = (1UL << 26); 
+    NRF_P0->OUTSET = (1UL << 26); // turn on
   }
   else{
-    NRF_P0->OUTCLR = (1UL << 26); 
+    NRF_P0->OUTCLR = (1UL << 26); // turn off
   }
 }
