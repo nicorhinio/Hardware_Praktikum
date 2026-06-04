@@ -9,8 +9,8 @@
 
 #include <Arduino.h>
 
-int BUZZER_PIN = 29;
-int BUTTON_PIN = 3;
+int BUZZER_PIN = 29; // GPIO P0.29
+int BUTTON_PIN = 3; // GPIO P0.03
 bool buzzerState = false;
 bool buttonState = false;
 uint32_t freq = 1046;
@@ -64,15 +64,15 @@ void setTimer1Freq() {
 
 
 void setBuzzerFreq(uint32_t newFreq) {
-  freq = newFreq;
-  if (newFreq == 0){
+  freq = newFreq; // set new Freq
+  if (newFreq == 0){ // Case in loop else -> No sound
     NRF_TIMER1->TASKS_STOP = 1;
     NRF_P0->OUTCLR = (1UL << BUZZER_PIN);
-    return;
+    return; // rest of fuction will not be executed
   }
-  uint32_t compareValue = 1000000UL / (2 * freq);
+  uint32_t compareValue = 1000000UL / (2 * freq); // set new compare Value
   NRF_TIMER1->TASKS_STOP = 1;
-  NRF_TIMER1->CC[0] = compareValue;
+  NRF_TIMER1->CC[0] = compareValue; // push compare VAlue into Register
   NRF_TIMER1->TASKS_CLEAR = 1;
   NRF_TIMER1->TASKS_START = 1;
 }
