@@ -7,14 +7,17 @@
 // ------------------------------------------------------------
 
 #include <Arduino.h>
-uint16_t durations[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+uint16_t durations[10] = {1000, 2000, 1000, 2000, 1000, 2000, 1000, 2000, 1000, 2000};
 uint16_t notes[10]     = {262, 294, 330, 349, 392, 440, 494, 523, 587, 659};
 volatile uint32_t tCount = 0;
 volatile uint8_t melodyIdx = 0;
+uint16_t length = 0;
+uint32_t freq = 1046;
+uint32_t BUZZER_PIN = 3;
+bool buzzerState = false;
 
 
 void setup() {
-  setTimer2(true);
   playMelody();
 }
 
@@ -25,7 +28,13 @@ void loop() {
 
 
 void playMelody() {
-
+  setTimer2(true);
+  while(melodyIdx < 10){
+    length = durations[melodyIdx];
+    while(length >= tCount){
+      setBuzzerFreq(notes[melodyIdx]);
+    }
+  }
 }
 
 void setBuzzerFreq(uint32_t newFreq) {
@@ -46,6 +55,13 @@ extern "C" void TIMER2_IRQHandler() {
   if (NRF_TIMER2->EVENTS_COMPARE[0]){
     NRF_TIMER2->EVENTS_COMPARE[0] = 0;
     tCount++;
+    if (tCount >= durations[melodyIdx]){
+      tCount = 0;
+      melodyIdx++;
+      if (melodyIdx >= 10){
+        setTimer2(false);
+      }
+    }
   }
 }
 
