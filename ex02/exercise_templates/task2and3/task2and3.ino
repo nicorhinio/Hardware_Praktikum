@@ -78,7 +78,7 @@ void setBuzzerFreq(uint32_t newFreq) {
 }
 
 
-extern "C" void TIMER1_IRQHandler() // start function if Copare0 is reached
+extern "C" void TIMER1_IRQHandler() // start function if Compare0 is reached
 {
   if (NRF_TIMER1->EVENTS_COMPARE[0]) // check if compare0 was activated
     {
