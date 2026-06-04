@@ -12,24 +12,30 @@
 int BUZZER_PIN = 29;
 int BUTTON_PIN = 3;
 bool buzzerState = false;
-bool buttonState = LOW;
+bool buttonState = false;
 uint32_t freq = 1046;
 
 
 void setup() {
   NRF_P0->DIRSET = (1UL << BUZZER_PIN); // set GPIO as Output
-  pinMode(BUTTON_PIN, INPUT_PULLUP); // set Button
+  NRF_P0->PIN_CNF[BUTTON_PIN] = (GPIO_PIN_CNF_DIR_Input << GPIO_PIN_CNF_DIR_Pos) | 
+  (GPIO_PIN_CNF_INPUT_Connect << GPIO_PIN_CNF_INPUT_Pos) | 
+  (GPIO_PIN_CNF_PULL_Pullup << GPIO_PIN_CNF_PULL_Pos); // set Button
   setTimer1Freq();
   NRF_TIMER1->TASKS_STOP = 1; // stop timer, so that no sound is played after setup
 }
 
 
 void loop() {
-  if(!(NRF_P0->IN & (1UL << BUTTON_PIN))){
-    setBuzzerFreq(1064);
-  }
-  else{
-    setBuzzerFreq(0);
+  bool pressed = !(NRF_P0->IN & (1UL << BUTTON_PIN)); // pressed is true if 1 is read from the button
+  if(pressed != buttonState){
+    buttonState = pressed;
+    if (pressed){
+      setBuzzerFreq(1046); // when button is pressed sound is played
+    }
+    else{
+      setBuzzerFreq(0); // when button is not pressed, no sound is played
+    }
   }
 }
 
