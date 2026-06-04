@@ -68,20 +68,69 @@ bool isDigit(char c) {
 
 
 void setBuzzerFreq(uint32_t freq) {
-
+  if ((freq > 3000) || (freq < 100)){
+    NRF_TIMER1->TASKS_STOP = 1;
+    NRF_P0->OUTCLR = (1UL << BUZZER_PIN);
+    return;
+  }
+  uint32_t compareValue = 1000000UL / (2 * freq);
+  NRF_TIMER1->CC[0] = compareValue; // Compare Value into Compare Register (CC)
+  NRF_TIMER1->SHORTS = TIMER_SHORTS_COMPARE0_CLEAR_Msk; // Stop Timer and Clear Timer, for compare with index 0 in CC
+  NRF_TIMER1->INTENSET = TIMER_INTENSET_COMPARE0_Msk; // activate Interrupt if Compare0 is reached
+  NVIC_EnableIRQ(TIMER1_IRQn);
+  NRF_TIMER1->TASKS_CLEAR = 1;
+  NRF_TIMER1->TASKS_START = 1;
 }
 
 
 extern "C" void TIMER1_IRQHandler() {
+  if (NRF_TIMER1->EVENTS_COMPARE[0]) // check if compare0 was activated
+    {
+        NRF_TIMER1->EVENTS_COMPARE[0] = 0; // reset Event
 
+        buzzerState = !buzzerState; // switch buzzerstate
+
+        if (buzzerState)
+            NRF_P0->OUTSET = (1UL << BUZZER_PIN);
+        else
+            NRF_P0->OUTCLR = (1UL << BUZZER_PIN);
+    }
 }
 
 
 void setTimer2(bool enable) {
-
+  NRF_TIMER2->TASKS_STOP = 1;
+  if (!enable){
+    return;
+  }
+  NRF_TIMER2->MODE = TIMER_MODE_MODE_Timer;
+  NRF_TIMER2->BITMODE = TIMER_BITMODE_BITMODE_32Bit;
+  NRF_TIMER2->PRESCALER = 4;
+  NRF_TIMER2->CC[0] = 1000;
+  NRF_TIMER2->SHORTS = TIMER_SHORTS_COMPARE0_CLEAR_Msk;
+  NRF_TIMER2->INTENSET = TIMER_INTENSET_COMPARE0_Msk;
+  NVIC_EnableIRQ(TIMER2_IRQn);
+  NRF_TIMER2->TASKS_CLEAR = 1;
+  NRF_TIMER2->TASKS_START = 1;
 }
 
 
 extern "C" void TIMER2_IRQHandler() {
-
+  if (NRF_TIMER2->EVENTS_COMPARE[0]){
+    NRF_TIMER2->EVENTS_COMPARE[0] = 0;
+    tCount++;
+    Serial.println(tCount);
+    if (tCount >= durations[melodyIdx]){
+      tCount = 0;
+      melodyIdx++;
+      Serial.println(tCount);
+      Serial.println(melodyIdx);
+      if (melodyIdx >= 10){
+        setTimer2(false);
+        setBuzzerFreq(0);
+      } else {
+        setBuzzerFreq(notes[melodyIdx]);
+      }
+    }
+  }
 }
