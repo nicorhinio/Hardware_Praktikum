@@ -7,17 +7,22 @@
 // ------------------------------------------------------------
 
 #include <Arduino.h>
+#include <Adafruit_TinyUSB.h>
+
 uint16_t durations[10] = {1000, 2000, 1000, 2000, 1000, 2000, 1000, 2000, 1000, 2000};
 uint16_t notes[10]     = {262, 294, 330, 349, 392, 440, 494, 523, 587, 659};
 volatile uint32_t tCount = 0;
 volatile uint8_t melodyIdx = 0;
 uint16_t length = 0;
 uint32_t freq = 1046;
-uint32_t BUZZER_PIN = 3;
+uint32_t BUZZER_PIN = 29;
 bool buzzerState = false;
 
 
 void setup() {
+  NRF_P0->DIRSET = (1UL << BUZZER_PIN);
+  Serial.begin(115200);
+  Serial.print("Melody is played.");
   playMelody();
 }
 
@@ -28,38 +33,40 @@ void loop() {
 
 
 void playMelody() {
+  setBuzzerFreq(notes[0]);
   setTimer2(true);
-  while(melodyIdx < 10){
-    length = durations[melodyIdx];
-    while(length >= tCount){
-      setBuzzerFreq(notes[melodyIdx]);
-    }
-  }
+  Serial.println("playMelody aufgerufen, Timer gestartet.");
+  
 }
 
 void setBuzzerFreq(uint32_t newFreq) {
   freq = newFreq;
   if ((newFreq > 3000) || (newFreq < 100)){
-    NRF_TIMER1->TASKS_STOP = 1;
+    NRF_TIMER2->TASKS_STOP = 1;
     NRF_P0->OUTCLR = (1UL << BUZZER_PIN);
     return;
   }
   uint32_t compareValue = 1000000UL / (2 * freq);
-  NRF_TIMER1->TASKS_STOP = 1;
-  NRF_TIMER1->CC[0] = compareValue;
-  NRF_TIMER1->TASKS_CLEAR = 1;
-  NRF_TIMER1->TASKS_START = 1;
+  NRF_TIMER2->TASKS_STOP = 1;
+  NRF_TIMER2->CC[0] = compareValue;
+  NRF_TIMER2->TASKS_CLEAR = 1;
+  NRF_TIMER2->TASKS_START = 1;
 }
 
 extern "C" void TIMER2_IRQHandler() {
   if (NRF_TIMER2->EVENTS_COMPARE[0]){
     NRF_TIMER2->EVENTS_COMPARE[0] = 0;
     tCount++;
+    Serial.println(tCount);
     if (tCount >= durations[melodyIdx]){
       tCount = 0;
       melodyIdx++;
+      Serial.println(tCount);
+      Serial.println(melodyIdx);
       if (melodyIdx >= 10){
         setTimer2(false);
+      } else {
+        setBuzzerFreq(notes[melodyIdx]);
       }
     }
   }
