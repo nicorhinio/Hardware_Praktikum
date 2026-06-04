@@ -35,7 +35,6 @@ void loop() {
 void playMelody() {
   setBuzzerFreq(notes[0]);
   setTimer2(true);
-  setTimer1Freq();
   Serial.println("playMelody aufgerufen, Timer gestartet.");
   
 }
@@ -48,8 +47,9 @@ void setBuzzerFreq(uint32_t newFreq) {
     return;
   }
   uint32_t compareValue = 1000000UL / (2 * freq);
-  NRF_TIMER1->TASKS_STOP = 1;
-  NRF_TIMER1->CC[0] = compareValue;
+  NRF_TIMER1->CC[0] = compareValue; // Compare Value into Compare Register (CC)
+  NRF_TIMER1->SHORTS = TIMER_SHORTS_COMPARE0_CLEAR_Msk; // Stop Timer and Clear Timer, for compare with index 0 in CC
+  NRF_TIMER1->INTENSET = TIMER_INTENSET_COMPARE0_Msk; // activate Interrupt if Compare0 is reached
   NVIC_EnableIRQ(TIMER1_IRQn);
   NRF_TIMER1->TASKS_CLEAR = 1;
   NRF_TIMER1->TASKS_START = 1;
@@ -103,23 +103,4 @@ void setTimer2(bool enable) {
   NVIC_EnableIRQ(TIMER2_IRQn);
   NRF_TIMER2->TASKS_CLEAR = 1;
   NRF_TIMER2->TASKS_START = 1;
-}
-
-void setTimer1Freq() {
-  NRF_TIMER1->TASKS_STOP = 1; // stop Timer
-  NRF_TIMER1->MODE = TIMER_MODE_MODE_Timer; // select normal mode of timer
-
-  NRF_TIMER1->BITMODE = TIMER_BITMODE_BITMODE_32Bit; // Timer from 0 - 2^32 instead of 0 - 2^16
-  NRF_TIMER1->PRESCALER = 4;     // adapt tickrate -> 16 MHz / 2^PRESCALER = 1MHz
-
-  uint32_t compareValue = 1000000UL / (2 * freq); // set Compare Value
-
-  NRF_TIMER1->CC[0] = compareValue; // Compare Value into Compare Register (CC)
-  NRF_TIMER1->SHORTS = TIMER_SHORTS_COMPARE0_CLEAR_Msk; // Stop Timer and Clear Timer, for compare with index 0 in CC
-  
-  NRF_TIMER1->INTENSET = TIMER_INTENSET_COMPARE0_Msk; // activate Interrupt if Compare0 is reached
-  NVIC_EnableIRQ(TIMER1_IRQn); // react to interrupt
-
-  NRF_TIMER1->TASKS_CLEAR = 1; // reset Timer -> activate clear -> Timer = 0
-  NRF_TIMER1->TASKS_START = 1; // start Timer
 }
