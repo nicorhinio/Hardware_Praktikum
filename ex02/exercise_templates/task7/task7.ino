@@ -15,8 +15,8 @@
 #include <string>
 #include <stdlib.h>
 
-uint16_t durations[100];
-uint16_t notes[100];
+uint16_t durationsArray[100];
+uint16_t notesArray[100];
 const char noteNames[] = {'c', 'C', 'd', 'D', 'e', 'f', 'F', 'g', 'G', 'a', 'A', 'b'};
 const uint16_t notes[] = {262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494};
 char buffer[]="Test:d=4,o=5,b=200:8g,8a,8c6,8a,e6,8p,e6,8p,d6.,8p,8g,8a,8c6,8a,d6,8p,d6,8p,c6,8p,a.,8g,8a,8c6,8a,2c6,d6,b,a,g.,8p,g,2d6,2c6.,p,8g,8a,8c6,8a,e6,8p,e6,8p,d6.,8p,8g,8a,8c6,8a,g6,b,c6,8p,b,8a,p,8g,8a,8c6,8a,2c6,d6,b,a,g,p,g,d6,c6";
@@ -142,9 +142,9 @@ void arrayToNote(String array[100]){
     String note = array[a];
     for (int b = 0; b < note.length(); b++){
       if (b == 0 && isDigit(note[b])){
-        durations[a] = str2uint(note[b], 0);
+        durationsArray[a] = str2uint(note[b], 0);
       } else{
-        durations[a] = standardDuration;
+        durationsArray[a] = standardDuration;
       }
       if (!isDigit(note[b])){
         bool sharp = false;
@@ -157,9 +157,9 @@ void arrayToNote(String array[100]){
           octave = str2uint(note[b], 0);
         }
         if (note[b] == '.'){
-          durations[a] = durations[a] * 1.25;
+          durationsArray[a] = durationsArray[a] + durationsArray[a] / 2;
         }
-        notes[a] = freqFromNote(note[b], sharp, octave);
+        notesArrray[a] = freqFromNote(note[b], sharp, octave);
                 
       }
     }
