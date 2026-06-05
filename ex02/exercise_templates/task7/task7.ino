@@ -137,32 +137,53 @@ void parseSongNotes(String notesStr){
   }
 }
 
-void arrayToNote(String array[100]){
+void arrayToNote(String array[100], uint16_t count){
   for(int a = 0; a < 100; a++){
     String note = array[a];
-    for (int b = 0; b < note.length(); b++){
-      if (b == 0 && isDigit(note[b])){
-        durationsArray[a] = str2uint(note[b], 0);
-      } else{
-        durationsArray[a] = standardDuration;
-      }
-      if (!isDigit(note[b])){
-        bool sharp = false;
-        uint8_t octave = standardOctave;
+    uint16_t b = 0;
+    uint16_t duration = standardDuration;
+    // check for duration in note
+    if (b < note.length() && isDigit(note[b])) {
+      duration = 0;
+      while (b < note.length() && isDigit(note[b])) {
+        duration = duration * 10 + (note[b] - '0');
         b++;
-        if (note[b] == '#'){
-          sharp = true;
-        }
-        if (isDigit(note[b])){
-          octave = str2uint(note[b], 0);
-        }
-        if (note[b] == '.'){
-          durationsArray[a] = durationsArray[a] + durationsArray[a] / 2;
-        }
-        notesArrray[a] = freqFromNote(note[b], sharp, octave);
-                
       }
     }
+    char noteName = note[b]; // note
+    b++;
+    // check for #
+    bool sharp = false;
+    if (b < note.length() && note[b] == '#') {
+      sharp = true;
+      b++;
+    }
+    // chck for octave
+    uint8_t octave = standardOctave;
+    if (b < note.length() && isDigit(note[b])) {
+      octave = 0;
+      while (b < note.length() && isDigit(note[b])) {
+        octave = octave * 10 + (note[b] - '0');
+        b++;
+      }
+    }
+    
+    bool dotted = false;
+    if (b < note.length() && note[b] == '.') {
+      dotted = true;
+      b++;
+    }
+    uint32_t quarterMs  = 60000UL / standardBPM;
+    uint32_t durationMs = (quarterMs * 4) / duration;
+    if (dotted) durationMs = durationMs + durationMs / 2;
+
+    durations[a] = (uint16_t)durationMs;
+
+    if (noteName == 'p') {
+      notes[a] = 0;
+    } else {
+      notes[a] = freqFromNote(noteName, sharp, octave);
+    }          
   }
 }
 
