@@ -10,10 +10,13 @@
 
 #include <Adafruit_TinyUSB.h>
 #include <Arduino.h>
+#include <U8g2lib.h>
 #include <stdio.h>
 #include <vector>
 #include <string>
 #include <stdlib.h>
+
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 
 uint16_t durationsArray[100];
 uint16_t notesArray[100];
@@ -67,7 +70,7 @@ void setup() {
   String song9 = "GoodSong9:o=4,d=8,b=125,b=125:c6,c6,a#5,c6,p,g5,p,g5,c6,f6,e6,c6,2p,c6,c6,a#5,c6,p,g5,p,g5,c6,f6,e6,c6";
   String song10 = "GoodSong10:o=5,d=8,b=160,b=160:c#6,a#,2p,a#,g#,f#,g#,a#,4c#6,a#,4c#6,d#6,a#,2p,a#,g#,f#,g#,a#,4c#6,a#,4c#6,d#6,b,2p,b,a#,g#,a#,b,4d#6,f#6,4d#6,4f6.,4d#6.,4c#6.,4b.,4a#,4g#";
   String song11 = "GoodSong11:o=5,d=16,b=125,b=125:b,a,4b,4e,4p,8p,c6,b,8c6,8b,4a,4p,8p,c6,b,4c6,4e,4p,8p,a,g,8a,8g,8f#,8a,4g.,f#,g,4a.,g,a,8b,8a,8g,8f#,4e,4c6,2b.,b,c6,b,a,1b";
-  parseRTTLSong(song1);
+  parseRTTLSong(song3);
   playMelody();
 }
 
@@ -88,7 +91,7 @@ void parseRTTLSong(String song){
   songDefaultsStr = song.substring(firstColon + 1, secondColon); // every helper function is used to fully parse the song
   songNotesStr = song.substring(secondColon + 1);
   String title = song.substring(0, firstColon - 1);
-  display_title(title)
+  display_title(title);
   Serial.println(songDefaultsStr);
   Serial.println(songNotesStr);
   Serial.println("parseDefaults starting...");
@@ -113,6 +116,7 @@ void display_title(String title) {
 
   u8g2.setCursor(0, 10);
   u8g2.print("current Song: ");
+  u8g2.setCursor(0, 20);
   u8g2.print(title);
 
   u8g2.sendBuffer();
