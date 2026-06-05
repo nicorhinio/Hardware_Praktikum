@@ -10,6 +10,9 @@
 
 #include <Adafruit_TinyUSB.h>
 #include <Arduino.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 const char noteNames[] = {'c', 'C', 'd', 'D', 'e', 'f', 'F', 'g', 'G', 'a', 'A', 'b'};
 const uint16_t notes[] = {262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494};
 char buffer[]="Test:d=4,o=5,b=200:8g,8a,8c6,8a,e6,8p,e6,8p,d6.,8p,8g,8a,8c6,8a,d6,8p,d6,8p,c6,8p,a.,8g,8a,8c6,8a,2c6,d6,b,a,g.,8p,g,2d6,2c6.,p,8g,8a,8c6,8a,e6,8p,e6,8p,d6.,8p,8g,8a,8c6,8a,g6,b,c6,8p,b,8a,p,8g,8a,8c6,8a,2c6,d6,b,a,g,p,g,d6,c6"
@@ -27,6 +30,8 @@ struct Note {
   uint16_t freq;      // Hz (0 = Pause)
   uint16_t duration;  // ms
 };
+
+std::vector<String> songNotes;
 
 void setup() {
   NRF_P0->DIRSET = (1UL << BUZZER_PIN);
@@ -55,9 +60,64 @@ void playRTTTL() {
 
 }
 
+void parseRTTLSong(String song){
+  size_t firstColon = song.find(":");
+  size_t secondColon = song.find(":", firstColon + 1);
+  std::string songDefaultsStr = song.substring(firstColon + 1, secondColon - firstColon - 1);
+  std::string songNotesStr = song.substring(secondColon + 1);
+  parseDefaults(songDefaultsStr);
+  parseSongNotes(songNotesStr);
+
+}
+
+void parseDefaults(String defaults){
+  for (int i = 0; i < defaults.length(); i++){
+    switch (defaults[i]) {
+    case 'd':
+      i++;
+      i++;
+      standardDuration = defaults[i] - '0';
+      break;
+    case 'o':
+      i++;
+      i++;
+      standardOctave = defaults[i] - '0';
+      break;
+    case 'b':
+      i++;
+      i++;
+      standardBPM = 0;
+      while (i < defaults.length() && isDigit(defaults[i])){
+        standardBPM = standardBPM * 10 + (defaults[i] - '0');
+        i++;
+      }
+      i--;
+      break;
+    default:
+      break;
+    }
+  }
+}
+
+void parseSongNotes(String notesStr){
+  for (int i = 0; i <= notesStr.length(); i++){
+    switch (notesStr[i]) {
+    case ',':
+      i++;
+      break;
+    default:
+      break;
+    }
+    int noteStart = i;
+    while(notesStr[i] != ','){
+      i++;
+    }
+    songNotes.push_back(notesStr.substring(noteStart, i));
+  }
+}
 
 bool parseRTTLNote(Note * note) {
-
+  
 }
 
 uint16_t freqFromNote(char note, bool sharp, uint8_t octave) {
