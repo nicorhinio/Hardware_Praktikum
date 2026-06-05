@@ -56,7 +56,7 @@ void setup() {
   String song10 = "GoodSong10:o=5,d=8,b=160,b=160:c#6,a#,2p,a#,g#,f#,g#,a#,4c#6,a#,4c#6,d#6,a#,2p,a#,g#,f#,g#,a#,4c#6,a#,4c#6,d#6,b,2p,b,a#,g#,a#,b,4d#6,f#6,4d#6,4f6.,4d#6.,4c#6.,4b.,4a#,4g#";
   String song11 = "GoodSong11:o=5,d=16,b=125,b=125:b,a,4b,4e,4p,8p,c6,b,8c6,8b,4a,4p,8p,c6,b,4c6,4e,4p,8p,a,g,8a,8g,8f#,8a,4g.,f#,g,4a.,g,a,8b,8a,8g,8f#,4e,4c6,2b.,b,c6,b,a,1b";
   parseRTTLSong(song1);
-  playRTTTL();
+  playMelody();
 }
 
 
@@ -87,7 +87,11 @@ void parseRTTLSong(String song){
   for (int j = 0; j < 100; j++){
     Serial.println(songNotes[j]);
   }
-
+  arrayToNote(songNotes, noteCount);
+  for (int k = 0; k < 100; k++){
+    Serial.println(durationsArray[k]);
+    Serial.println(notesArray[k]);
+  }
 }
 
 void parseDefaults(String defaults){
@@ -177,12 +181,12 @@ void arrayToNote(String array[100], uint16_t count){
     uint32_t durationMs = (quarterMs * 4) / duration;
     if (dotted) durationMs = durationMs + durationMs / 2;
 
-    durations[a] = (uint16_t)durationMs;
+    durationsArray[a] = (uint16_t)durationMs;
 
     if (noteName == 'p') {
-      notes[a] = 0;
+      notesArray[a] = 0;
     } else {
-      notes[a] = freqFromNote(noteName, sharp, octave);
+      notesArray[a] = freqFromNote(noteName, sharp, octave);
     }          
   }
 }
@@ -294,7 +298,7 @@ void setTimer2(bool enable) {
 }
 
 void playMelody() {
-  setBuzzerFreq(notes[0]);
+  setBuzzerFreq(notesArray[0]);
   setTimer2(true);
   Serial.println("playMelody aufgerufen, Timer gestartet.");
   
@@ -305,16 +309,16 @@ extern "C" void TIMER2_IRQHandler() {
     NRF_TIMER2->EVENTS_COMPARE[0] = 0;
     tCount++;
     Serial.println(tCount);
-    if (tCount >= durations[melodyIdx]){
+    if (tCount >= durationsArray[melodyIdx]){
       tCount = 0;
       melodyIdx++;
       Serial.println(tCount);
       Serial.println(melodyIdx);
-      if (melodyIdx >= 100){
+      if (melodyIdx >= noteCount){
         setTimer2(false);
         setBuzzerFreq(0);
       } else {
-        setBuzzerFreq(notes[melodyIdx]);
+        setBuzzerFreq(notesArray[melodyIdx]);
       }
     }
   }
