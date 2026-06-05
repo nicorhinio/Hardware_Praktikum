@@ -11,11 +11,13 @@
 #include <Adafruit_TinyUSB.h>
 #include <Arduino.h>
 #include <stdio.h>
+#include <vector>
+#include <string>
 #include <stdlib.h>
 
 const char noteNames[] = {'c', 'C', 'd', 'D', 'e', 'f', 'F', 'g', 'G', 'a', 'A', 'b'};
 const uint16_t notes[] = {262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494};
-char buffer[]="Test:d=4,o=5,b=200:8g,8a,8c6,8a,e6,8p,e6,8p,d6.,8p,8g,8a,8c6,8a,d6,8p,d6,8p,c6,8p,a.,8g,8a,8c6,8a,2c6,d6,b,a,g.,8p,g,2d6,2c6.,p,8g,8a,8c6,8a,e6,8p,e6,8p,d6.,8p,8g,8a,8c6,8a,g6,b,c6,8p,b,8a,p,8g,8a,8c6,8a,2c6,d6,b,a,g,p,g,d6,c6"
+char buffer[]="Test:d=4,o=5,b=200:8g,8a,8c6,8a,e6,8p,e6,8p,d6.,8p,8g,8a,8c6,8a,d6,8p,d6,8p,c6,8p,a.,8g,8a,8c6,8a,2c6,d6,b,a,g.,8p,g,2d6,2c6.,p,8g,8a,8c6,8a,e6,8p,e6,8p,d6.,8p,8g,8a,8c6,8a,g6,b,c6,8p,b,8a,p,8g,8a,8c6,8a,2c6,d6,b,a,g,p,g,d6,c6";
 volatile uint8_t melodyIdx = 0;
 volatile uint32_t tCount = 0;
 uint16_t standardDuration = 4;
@@ -31,10 +33,14 @@ struct Note {
   uint16_t duration;  // ms
 };
 
-std::vector<String> songNotes;
+Note songNotes[100];
+uint16_t noteCount = 0;
+String songDefaultsStr;
+String songNotesStr;
 
 void setup() {
   NRF_P0->DIRSET = (1UL << BUZZER_PIN);
+  Serial.begin(115200);
   String song0 = "";
   String song1 = "GoodSong1:d=4,o=4,b=112:c,d#,f.,c,d#,8f#,f,p,c,d#,f.,d#,c";
   String song2 = "GoodSong2:o=5,d=4,b=320,b=320:c,8d,8d,d,2d,c,c,c,c,8d#,8d#,2d#,d,d,d,c,8d,8d,d,2d,c,c,c,c,8d#,8d#,d#,2d#,d,c#,c,c6,1b.,g,f,1g.";
@@ -47,6 +53,7 @@ void setup() {
   String song9 = "GoodSong9:o=4,d=8,b=125,b=125:c6,c6,a#5,c6,p,g5,p,g5,c6,f6,e6,c6,2p,c6,c6,a#5,c6,p,g5,p,g5,c6,f6,e6,c6";
   String song10 = "GoodSong10:o=5,d=8,b=160,b=160:c#6,a#,2p,a#,g#,f#,g#,a#,4c#6,a#,4c#6,d#6,a#,2p,a#,g#,f#,g#,a#,4c#6,a#,4c#6,d#6,b,2p,b,a#,g#,a#,b,4d#6,f#6,4d#6,4f6.,4d#6.,4c#6.,4b.,4a#,4g#";
   String song11 = "GoodSong11:o=5,d=16,b=125,b=125:b,a,4b,4e,4p,8p,c6,b,8c6,8b,4a,4p,8p,c6,b,4c6,4e,4p,8p,a,g,8a,8g,8f#,8a,4g.,f#,g,4a.,g,a,8b,8a,8g,8f#,4e,4c6,2b.,b,c6,b,a,1b";
+  parseRTTLSong(song1);
   playRTTTL();
 }
 
@@ -61,10 +68,12 @@ void playRTTTL() {
 }
 
 void parseRTTLSong(String song){
-  size_t firstColon = song.find(":");
-  size_t secondColon = song.find(":", firstColon + 1);
-  std::string songDefaultsStr = song.substring(firstColon + 1, secondColon - firstColon - 1);
-  std::string songNotesStr = song.substring(secondColon + 1);
+  size_t firstColon = song.indexOf(':');
+  size_t secondColon = song.indexOf(':', firstColon + 1);
+  songDefaultsStr = song.substring(firstColon + 1, secondColon);
+  songNotesStr = song.substring(secondColon + 1);
+  Serial.println(songDefaultsStr);
+  Serial.println(songNotesStr);
   parseDefaults(songDefaultsStr);
   parseSongNotes(songNotesStr);
 
@@ -112,7 +121,8 @@ void parseSongNotes(String notesStr){
     while(notesStr[i] != ','){
       i++;
     }
-    songNotes.push_back(notesStr.substring(noteStart, i));
+    songNotes[noteCount] = notesStr.substring(noteStart, i));
+    noteCount++;
   }
 }
 
@@ -128,9 +138,9 @@ uint16_t freqFromNote(char note, bool sharp, uint8_t octave) {
   switch (note){
     case 'c':
       baseFreq = sharp ? 277 : 262;
-      break
+      break;
     case 'd':
-      baseFreq = sharp ? 311 . 294;
+      baseFreq = sharp ? 311 : 294;
       break;
     case 'e':
       baseFreq = 330; 
@@ -226,6 +236,12 @@ void setTimer2(bool enable) {
   NRF_TIMER2->TASKS_START = 1;
 }
 
+void playMelody() {
+  setBuzzerFreq(notes[0]);
+  setTimer2(true);
+  Serial.println("playMelody aufgerufen, Timer gestartet.");
+  
+}
 
 extern "C" void TIMER2_IRQHandler() {
   if (NRF_TIMER2->EVENTS_COMPARE[0]){
