@@ -15,7 +15,8 @@
 #include <string>
 #include <stdlib.h>
 
-uint16_t durations[10] = {1000, 2000, 1000, 2000, 1000, 2000, 1000, 2000, 1000, 2000};
+uint16_t durations[100];
+uint16_t notes[100];
 const char noteNames[] = {'c', 'C', 'd', 'D', 'e', 'f', 'F', 'g', 'G', 'a', 'A', 'b'};
 const uint16_t notes[] = {262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494};
 char buffer[]="Test:d=4,o=5,b=200:8g,8a,8c6,8a,e6,8p,e6,8p,d6.,8p,8g,8a,8c6,8a,d6,8p,d6,8p,c6,8p,a.,8g,8a,8c6,8a,2c6,d6,b,a,g.,8p,g,2d6,2c6.,p,8g,8a,8c6,8a,e6,8p,e6,8p,d6.,8p,8g,8a,8c6,8a,g6,b,c6,8p,b,8a,p,8g,8a,8c6,8a,2c6,d6,b,a,g,p,g,d6,c6";
@@ -29,10 +30,6 @@ uint32_t BUZZER_PIN = 29;
 bool buzzerState    = false;
 uint16_t bufIdx = 0;
 
-struct Note {
-  uint16_t freq;      // Hz (0 = Pause)
-  uint16_t duration;  // ms
-};
 
 String songNotes[100];
 uint16_t noteCount = 0;
@@ -41,6 +38,9 @@ String songNotesStr;
 
 void setup() {
   Serial.begin(115200);
+  while(!Serial){
+    delay(10);
+  }
   Serial.println("Starting...");
   NRF_P0->DIRSET = (1UL << BUZZER_PIN);
   String song0 = "";
@@ -79,8 +79,14 @@ void parseRTTLSong(String song){
   Serial.println(songNotesStr);
   Serial.println("parseDefaults starting...");
   parseDefaults(songDefaultsStr);
-  Serial.println("songNotesStr starting...");
+  Serial.println(standardDuration);
+  Serial.println(standardOctave);
+  Serial.println(standardBPM);
+  Serial.println("parseSongNotes starting...");
   parseSongNotes(songNotesStr);
+  for (int j = 0; j < 100; j++){
+    Serial.println(songNotes[j]);
+  }
 
 }
 
@@ -123,7 +129,7 @@ void parseSongNotes(String notesStr){
       break;
     }
     int noteStart = i;
-    while(notesStr[i] != ','){
+    while(notesStr[i] != ',' && i < notesStr.length()){
       i++;
     };
     songNotes[noteCount] = notesStr.substring(noteStart, i);
@@ -131,8 +137,33 @@ void parseSongNotes(String notesStr){
   }
 }
 
-bool parseRTTLNote(Note * note) {
- return true;  
+void arrayToNote(String array[100]){
+  for(int a = 0; a < 100; a++){
+    String note = array[a];
+    for (int b = 0; b < note.length(); b++){
+      if (b == 0 && isDigit(note[b])){
+        durations[a] = str2uint(note[b], 0);
+      } else{
+        durations[a] = standardDuration;
+      }
+      if (!isDigit(note[b])){
+        bool sharp = false;
+        uint8_t octave = standardOctave;
+        b++;
+        if (note[b] == '#'){
+          sharp = true;
+        }
+        if (isDigit(note[b])){
+          octave = str2uint(note[b], 0);
+        }
+        if (note[b] == '.'){
+          durations[a] = durations[a] * 1.25;
+        }
+        notes[a] = freqFromNote(note[b], sharp, octave);
+                
+      }
+    }
+  }
 }
 
 uint16_t freqFromNote(char note, bool sharp, uint8_t octave) {
@@ -258,7 +289,7 @@ extern "C" void TIMER2_IRQHandler() {
       melodyIdx++;
       Serial.println(tCount);
       Serial.println(melodyIdx);
-      if (melodyIdx >= 10){
+      if (melodyIdx >= 100){
         setTimer2(false);
         setBuzzerFreq(0);
       } else {
