@@ -15,6 +15,7 @@
 #include <string>
 #include <stdlib.h>
 
+uint16_t durations[10] = {1000, 2000, 1000, 2000, 1000, 2000, 1000, 2000, 1000, 2000};
 const char noteNames[] = {'c', 'C', 'd', 'D', 'e', 'f', 'F', 'g', 'G', 'a', 'A', 'b'};
 const uint16_t notes[] = {262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494};
 char buffer[]="Test:d=4,o=5,b=200:8g,8a,8c6,8a,e6,8p,e6,8p,d6.,8p,8g,8a,8c6,8a,d6,8p,d6,8p,c6,8p,a.,8g,8a,8c6,8a,2c6,d6,b,a,g.,8p,g,2d6,2c6.,p,8g,8a,8c6,8a,e6,8p,e6,8p,d6.,8p,8g,8a,8c6,8a,g6,b,c6,8p,b,8a,p,8g,8a,8c6,8a,2c6,d6,b,a,g,p,g,d6,c6";
@@ -33,7 +34,7 @@ struct Note {
   uint16_t duration;  // ms
 };
 
-Note songNotes[100];
+String songNotes[100];
 uint16_t noteCount = 0;
 String songDefaultsStr;
 String songNotesStr;
@@ -120,14 +121,14 @@ void parseSongNotes(String notesStr){
     int noteStart = i;
     while(notesStr[i] != ','){
       i++;
-    }
-    songNotes[noteCount] = notesStr.substring(noteStart, i));
+    };
+    songNotes[noteCount] = notesStr.substring(noteStart, i);
     noteCount++;
   }
 }
 
 bool parseRTTLNote(Note * note) {
-  
+ return true;  
 }
 
 uint16_t freqFromNote(char note, bool sharp, uint8_t octave) {
@@ -159,6 +160,7 @@ uint16_t freqFromNote(char note, bool sharp, uint8_t octave) {
       break;
     default:
       return 0;
+    }
     
     // adjusting octave if unequal to standard octave
     if (octave > 5){
@@ -169,14 +171,13 @@ uint16_t freqFromNote(char note, bool sharp, uint8_t octave) {
     }
 
     return baseFreq;
-  }
 }
 
 
 uint16_t str2uint(char * buf, uint16_t * idx) {
   uint16_t result = 0;
-  while(isDigit(buf[idx])){
-    result = result * 10 + (buf[*idx] - '0') // left shift current result + digit
+  while(isDigit(buf[*idx])){
+    result = result * 10 + (buf[*idx] - '0'); // left shift current result + digit
     (*idx)++; // increment of idx
 
   }
