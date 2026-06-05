@@ -74,6 +74,7 @@ uint16_t freqFromNote(char note, bool sharp, uint8_t octave) {
       break;
     case 'e':
       baseFreq = 330; 
+      break;
     case 'f':
       baseFreq = sharp ? 370 : 349; 
       break;
@@ -82,14 +83,14 @@ uint16_t freqFromNote(char note, bool sharp, uint8_t octave) {
       break;
     case 'a':
       baseFreq = sharp ? 466 : 440; 
-      braek;
+      break;
     case 'b':
       baseFreq = 494;
       break;
     default:
       return 0;
     
-    // adjusting octave if unequal to standardoctave
+    // adjusting octave if unequal to standard octave
     if (octave > 5){
       baseFreq = baseFreq << (octave - 5);
     }
