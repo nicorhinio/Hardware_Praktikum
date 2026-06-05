@@ -44,10 +44,10 @@ void setup() {
   Serial.println("Starting...");
   NRF_P0->DIRSET = (1UL << BUZZER_PIN);
   String song0 = "";
-  String song1 = "GoodSong1:d=4,o=4,b=112:c,d#,f.,c,d#,8f#,f,p,c,d#,f.,d#,c";
+  String song1 = "Smoke on the Water:d=4,o=4,b=112:c,d#,f.,c,d#,8f#,f,p,c,d#,f.,d#,c";
   String song2 = "GoodSong2:o=5,d=4,b=320,b=320:c,8d,8d,d,2d,c,c,c,c,8d#,8d#,2d#,d,d,d,c,8d,8d,d,2d,c,c,c,c,8d#,8d#,d#,2d#,d,c#,c,c6,1b.,g,f,1g.";
   String song3 = "GoodSong3:o=5,d=8,b=112,b=112:d,d,a,d,e6,d,d6,d,f#,g,c6,f#,g,c6,e,d,d,d,a,d,e6,d,d6,d,f#,g,c6,f#,g,c6,e,d,c,d,a,d,e6,d,d6,d,f#,g,c6,f#,g,c6,e,d,c,d,a,d,e6,d,d6,d,a,d,e6,d,d6";
-  String song4 = "GoodSong4:o=5,d=8,b=125,b=125:16g,16g,a#.,16g,16p,16g,c6,g,f,4g,d6.,16g,16p,16g,d#6,d6,a#,g,d6,g6,16g,16f,16p,16f,d,a#,2g,4p,16f6,d6,c6,a#,4g,a#.,16g,16p,16g,c6,g,f,4g,d6.,16g,16p,16g,d#6,d6,a#,g,d6,g6,16g,16f,16p,16f,d,a#,2g";
+  String song4 = "Crazy Frog:o=5,d=8,b=125,b=125:16g,16g,a#.,16g,16p,16g,c6,g,f,4g,d6.,16g,16p,16g,d#6,d6,a#,g,d6,g6,16g,16f,16p,16f,d,a#,2g,4p,16f6,d6,c6,a#,4g,a#.,16g,16p,16g,c6,g,f,4g,d6.,16g,16p,16g,d#6,d6,a#,g,d6,g6,16g,16f,16p,16f,d,a#,2g";
   String song5 = "GoodSong5:o=5,d=16,b=100,b=100:g,g,a,a,e,e,8g,g,g,a,a,e,e,8g,g,g,a,a,c6,c6,8b,8b,8a,8g,8f,f,f,g,g,d,d,8f,f,f,g,g,d,d,8f,f,f,g,g,a,b,8c6,8a,8g,8e,4c";
   String song6 = "GoodSong6:o=5,d=8,b=140,b=140:g,e,4p,p,e,f,g,e6,p,e6,p,2c6,g,e,4p,p,e,f,e,g,p,g,p,2f,f,d,4p,p,d,e,f,g,e,4p,p,e,f#,e,d,g,p,e,f#,d,p,a,g.,16f#,g,a,g,f,e,d";
   String song7 = "GoodSong7:o=5,d=8,b=63,b=63:a4,c,e,a,b,e,c,b,c6,e,c,c6,f#,d,a4,f#,e.,16c,a4,4e,c,a4,e,g4,a4,4a4";
@@ -69,12 +69,13 @@ void playRTTTL() {
 
 }
 
-void parseRTTLSong(String song){
+void parseRTTLSong(String song){ 
   Serial.println("parseRTTLSong started.");
   size_t firstColon = song.indexOf(':');
   size_t secondColon = song.indexOf(':', firstColon + 1);
-  songDefaultsStr = song.substring(firstColon + 1, secondColon);
+  songDefaultsStr = song.substring(firstColon + 1, secondColon); // every helper function is used to fully parse the song
   songNotesStr = song.substring(secondColon + 1);
+  String title = song.substring(0, firstColon - 1);
   Serial.println(songDefaultsStr);
   Serial.println(songNotesStr);
   Serial.println("parseDefaults starting...");
@@ -142,7 +143,7 @@ void parseSongNotes(String notesStr){
 }
 
 void arrayToNote(String array[100], uint16_t count){
-  for(int a = 0; a < 100; a++){
+  for(int a = 0; a < noteCount; a++){
     String note = array[a];
     uint16_t b = 0;
     uint16_t duration = standardDuration;
@@ -193,7 +194,6 @@ void arrayToNote(String array[100], uint16_t count){
 
 uint16_t freqFromNote(char note, bool sharp, uint8_t octave) {
   uint16_t baseFreq = 0; // Basefrequency
-  // Patternmatching Python Style
   // note c with sharp is true -> C
   // e# -> b
   switch (note){
@@ -231,17 +231,6 @@ uint16_t freqFromNote(char note, bool sharp, uint8_t octave) {
     }
 
     return baseFreq;
-}
-
-
-uint16_t str2uint(char * buf, uint16_t * idx) {
-  uint16_t result = 0;
-  while(isDigit(buf[*idx])){
-    result = result * 10 + (buf[*idx] - '0'); // left shift current result + digit
-    (*idx)++; // increment of idx
-
-  }
-  return result;
 }
 
 
