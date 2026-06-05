@@ -41,6 +41,18 @@ void setup() {
   while(!Serial){
     delay(10);
   }
+
+  u8g2.begin();
+
+  u8g2.setFont(u8g2_font_helvB08_tf);
+
+  u8g2.clearBuffer();
+
+  u8g2.drawStr(0, 20, "Hardware");
+  u8g2.drawStr(0, 40, "Praktikum 2026");
+  u8g2.sendBuffer();
+  delay(3500);
+
   Serial.println("Starting...");
   NRF_P0->DIRSET = (1UL << BUZZER_PIN);
   String song0 = "";
@@ -76,6 +88,7 @@ void parseRTTLSong(String song){
   songDefaultsStr = song.substring(firstColon + 1, secondColon); // every helper function is used to fully parse the song
   songNotesStr = song.substring(secondColon + 1);
   String title = song.substring(0, firstColon - 1);
+  display_title(title)
   Serial.println(songDefaultsStr);
   Serial.println(songNotesStr);
   Serial.println("parseDefaults starting...");
@@ -93,6 +106,16 @@ void parseRTTLSong(String song){
     Serial.println(durationsArray[k]);
     Serial.println(notesArray[k]);
   }
+}
+
+void display_title(String title) {
+  u8g2.clearBuffer();
+
+  u8g2.setCursor(0, 10);
+  u8g2.print("current Song: ");
+  u8g2.print(title);
+
+  u8g2.sendBuffer();
 }
 
 void parseDefaults(String defaults){
