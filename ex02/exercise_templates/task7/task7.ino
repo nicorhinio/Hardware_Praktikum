@@ -40,8 +40,9 @@ String songDefaultsStr;
 String songNotesStr;
 
 void setup() {
-  NRF_P0->DIRSET = (1UL << BUZZER_PIN);
   Serial.begin(115200);
+  Serial.println("Starting...");
+  NRF_P0->DIRSET = (1UL << BUZZER_PIN);
   String song0 = "";
   String song1 = "GoodSong1:d=4,o=4,b=112:c,d#,f.,c,d#,8f#,f,p,c,d#,f.,d#,c";
   String song2 = "GoodSong2:o=5,d=4,b=320,b=320:c,8d,8d,d,2d,c,c,c,c,8d#,8d#,2d#,d,d,d,c,8d,8d,d,2d,c,c,c,c,8d#,8d#,d#,2d#,d,c#,c,c6,1b.,g,f,1g.";
@@ -69,13 +70,16 @@ void playRTTTL() {
 }
 
 void parseRTTLSong(String song){
+  Serial.println("parseRTTLSong started.");
   size_t firstColon = song.indexOf(':');
   size_t secondColon = song.indexOf(':', firstColon + 1);
   songDefaultsStr = song.substring(firstColon + 1, secondColon);
   songNotesStr = song.substring(secondColon + 1);
   Serial.println(songDefaultsStr);
   Serial.println(songNotesStr);
+  Serial.println("parseDefaults starting...");
   parseDefaults(songDefaultsStr);
+  Serial.println("songNotesStr starting...");
   parseSongNotes(songNotesStr);
 
 }
