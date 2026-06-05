@@ -19,8 +19,17 @@ uint16_t standardDuration = 4;
 uint16_t standardOctave = 6;
 uint16_t standardBPM = 63;
 
+uint32_t BUZZER_PIN = 29;
+bool buzzerState    = false;
+uint16_t bufIdx = 0;
+
+struct Note {
+  uint16_t freq;      // Hz (0 = Pause)
+  uint16_t duration;  // ms
+};
 
 void setup() {
+  NRF_P0->DIRSET = (1UL << BUZZER_PIN);
   String song0 = "";
   String song1 = "GoodSong1:d=4,o=4,b=112:c,d#,f.,c,d#,8f#,f,p,c,d#,f.,d#,c";
   String song2 = "GoodSong2:o=5,d=4,b=320,b=320:c,8d,8d,d,2d,c,c,c,c,8d#,8d#,2d#,d,d,d,c,8d,8d,d,2d,c,c,c,c,8d#,8d#,d#,2d#,d,c#,c,c6,1b.,g,f,1g.";
@@ -51,19 +60,61 @@ bool parseRTTLNote(Note * note) {
 
 }
 
+uint16_t freqFromNote(char note, bool sharp, uint8_t octave) {
+  uint16_t baseFreq = 0; // Basefrequency
+  // Patternmatching Python Style
+  // note c with sharp is true -> C
+  // e# -> b
+  switch (note){
+    case 'c':
+      baseFreq = sharp ? 277 : 262;
+      break
+    case 'd':
+      baseFreq = sharp ? 311 . 294;
+      break;
+    case 'e':
+      baseFreq = 330; 
+    case 'f':
+      baseFreq = sharp ? 370 : 349; 
+      break;
+    case 'g':
+      baseFreq = sharp ? 415 : 392; 
+      break;
+    case 'a':
+      baseFreq = sharp ? 466 : 440; 
+      braek;
+    case 'b':
+      baseFreq = 494;
+      break;
+    default:
+      return 0;
+    
+    // adjusting octave if unequal to standardoctave
+    if (octave > 5){
+      baseFreq = baseFreq << (octave - 5);
+    }
+    else if (octave < 5){
+      baseFreq = baseFreq >> (5 - octave);
+    }
 
-uint16_t freqFromNote(char note, bool sharp) {
-
+    return baseFreq;
+  }
 }
 
 
 uint16_t str2uint(char * buf, uint16_t * idx) {
+  uint16_t result = 0;
+  while(isDigit(buf[idx])){
+    result = result * 10 + (buf[*idx] - '0') // left shift current result + digit
+    (*idx)++; // increment of idx
 
+  }
+  return result;
 }
 
 
 bool isDigit(char c) { 
-
+  return c >= '0' && c <= '9';
 }
 
 
