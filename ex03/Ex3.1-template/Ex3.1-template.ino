@@ -10,8 +10,13 @@ const char* categorize(int normalized) {
 
 void setup() {
     // TODO: initialize Serial communication
-
+    Serial.begin(115200);
+    while(!Serial){
+        delay(10);
+    }
     // TODO: configure ADC resolution to 12-bit
+    SAADC_ENABLE = 1;
+    SAADC_CH[7].CONFIG = 1;
 
 }
 
