@@ -10,9 +10,16 @@ const unsigned long interval = 500;
 // TODO: define necessary constants (e.g., calibration range, thresholds, timing)
 
 // TODO: implement a function that categorizes the normalized value
-// const char* categorize(int normalized) {
+const char* categorize(int normalized) {
     // TODO: return "LOW", "MEDIUM", or "HIGH"
-//}
+    if (normalized < 30){
+        return "LOW";
+    }else if(normalized < 70){
+        return "MEDIUM";
+    }else{
+        return "HIGH";
+    }
+}
 
 void setup() {
     // TODO: initialize Serial communication
@@ -40,8 +47,8 @@ void loop() {
     // TODO: read raw value from light sensor
     
         rawValue = saadcRawRead();
-        Serial.print(rawValue);
-        Serial.println("Sample collected.");
+        Serial.print("raw value: ");
+        Serial.println(rawValue);
     // TODO: clamp the raw value to a calibrated range
         if (rawValue < 50){
             rawValue = 50;
@@ -51,9 +58,10 @@ void loop() {
     // TODO: normalize the value to a 0–100 scale
         long mapping = map(rawValue, 50, 3500, 0, 100);
         mapping = constrain(mapping, 0, 100);
+        Serial.print("normalized value: ");
         Serial.println(mapping);
     // TODO: determine the category using the categorize() function
-
+    Serial.println(categorize(mapping));
     // TODO: print raw value, normalized value, and category to Serial
     }
 }
@@ -62,10 +70,10 @@ uint16_t saadcRawRead(){
     Serial.println("Reading...");
     NRF_SAADC->EVENTS_END = 0;
     NRF_SAADC->TASKS_START = 1;
-    while(NRF_SAADC->EVENTS_STARTED);
+    while(!NRF_SAADC->EVENTS_STARTED);
     NRF_SAADC->EVENTS_STARTED = 0;
     NRF_SAADC->TASKS_SAMPLE = 1;
-    while(NRF_SAADC->EVENTS_END);
+    while(!NRF_SAADC->EVENTS_END);
     NRF_SAADC->TASKS_STOP = 1;
     Serial.println("Reading finished.");
     return adc_result;
