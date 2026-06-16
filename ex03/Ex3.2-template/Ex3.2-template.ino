@@ -8,9 +8,9 @@
 
 // --- Configuration ---
 // TODO: define sensor pin and type (DHT11)
-#define TEMP_PIN 7
 #define SENSOR_TYPE DHT11
 
+int TEMP_PIN = 7;
 // --- Objects ---
 // TODO: create DHT sensor instance
 DHT dht_sensor(TEMP_PIN, SENSOR_TYPE);
@@ -26,9 +26,15 @@ float lastHum = 0;
 // TODO: maintain a failure counter
 int failureCounter = 0;
 // --- Computation ---
-//float computeDewPoint(float tempC, float relHum) {
+const float a = 17.62;
+const float b = 243.12;
+
+float computeDewPoint(float tempC, float relHum) {
     // TODO: implement Magnus formula using natural logarithm
-//}
+    float gamma = ((a * tempC) / (b + tempC)) + log(relHum / 100);
+    float dewPoint = (b * gamma) / (a - gamma);
+    return dewPoint;
+}
 
 void setup() {
     Serial.begin(115200);
@@ -38,6 +44,7 @@ void setup() {
 
     // TODO: initialize sensor
     dht_sensor.begin();
+    delay(2000);
 }
 
 void loop() {
@@ -66,12 +73,21 @@ void loop() {
     } else{
         lastTemp = temperatureCelsius;
         lastHum = humidity;
+        failureCounter = 0;
     }
+
+    // TODO: compute dew point, print formatted output. If failure count exceeds threshold print a warning. 
+    if (failureCounter >= 5){
+        Serial.print("[WARNING] DHT failures: ");
+        Serial.println(failureCounter);
+    }
+    float currentDewPoint = computeDewPoint(temperatureCelsius, humidity);
     Serial.print("T: ");
     Serial.println(temperatureCelsius);
     Serial.print("H: ");
     Serial.println(humidity);
+    Serial.print("Dew Point: ");
+    Serial.println(currentDewPoint);
     Serial.println(" ");
-    // TODO: compute dew point, print formatted output. If failure count exceeds threshold print a warning. 
     }
 }
