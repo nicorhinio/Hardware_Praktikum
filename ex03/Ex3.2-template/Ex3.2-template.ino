@@ -83,11 +83,14 @@ void loop() {
     }
     float currentDewPoint = computeDewPoint(temperatureCelsius, humidity);
     Serial.print("T: ");
-    Serial.println(temperatureCelsius);
+    Serial.print(temperatureCelsius);
+    Serial.println("C");
     Serial.print("H: ");
-    Serial.println(humidity);
+    Serial.print(humidity);
+    Serial.println("%");
     Serial.print("Dew Point: ");
-    Serial.println(currentDewPoint);
+    Serial.print(currentDewPoint);
+    Serial.println("C");
     Serial.println(" ");
     }
 }
