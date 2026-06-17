@@ -35,6 +35,14 @@ float lastHum = 0;
 int failureCounter = 0;
 const float a = 17.62;
 const float b = 243.12;
+
+Adafruit_SGP30 sgp;
+unsigned long sgpLastMeasurement = 0;
+const unsigned long sgpInterval = 1000;
+
+const unsigned long warmupInterval = 15000;
+unsigned long warmupStartTime = 0;
+bool warmupSensorReady = false;
 // --- Objects ---
 // TODO: initialize display, sensors, BLE service and characteristic
 
@@ -58,10 +66,8 @@ SystemState currentState = STATE_INIT;
 
 void setup() {
     Serial.begin(115200);
+    while (!Serial && millis() < 3000);
 
-    while(!Serial){
-        delay(10);
-    }
     // TODO: initialize hardware (pins, display, sensors)
     Serial.println("Starting...");
 
@@ -74,11 +80,42 @@ void setup() {
     Serial.println("SAADC configurated.");
 
     dht_sensor.begin();
-    delay(2000);
+
+    sgp.begin();
+    warmupStartTime = millis();
+
+    // delay(2000); -> warm-up time globally defined, sgp sensor has longest warm-up time, incorrect values are declared as unstable, no need for delay() warmup.
 
     // TODO: initialize BLE and start advertising
 
     // TODO: store system start time (for warm-up)
+}
+
+uint16_t saadcRawRead(){
+    NRF_SAADC->EVENTS_END = 0;
+    NRF_SAADC->TASKS_START = 1;
+    while(!NRF_SAADC->EVENTS_STARTED);
+    NRF_SAADC->EVENTS_STARTED = 0;
+    NRF_SAADC->TASKS_SAMPLE = 1;
+    while(!NRF_SAADC->EVENTS_END);
+    NRF_SAADC->TASKS_STOP = 1;
+    return adc_result;
+}
+
+const char* categorize(int normalized) {
+    if (normalized < 30){
+        return "LOW";
+    }else if(normalized < 70){
+        return "MEDIUM";
+    }else{
+        return "HIGH";
+    }
+}
+
+float computeDewPoint(float tempC, float relHum) {
+    float gamma = ((a * tempC) / (b + tempC)) + log(relHum / 100);
+    float dewPoint = (b * gamma) / (a - gamma);
+    return dewPoint;
 }
 
 void loop() {
@@ -88,6 +125,32 @@ void loop() {
 
     // i) TODO: asynchronous sensor acquisition (light, DHT, SGP30)
 
+    //Warm-up: as long as one sensor unstable, every output is considered unstable.
+    if (!warmupSensorReady){
+        Serial.print("UNSTABLE/WARMUP ");
+    }
+
+    // Air Quality Measurement.
+    if((now - sgpLastMeasurement) >= sgpInterval){
+        if (!sgp.IAQmeasure()) {
+            Serial.println("SGP30 measurement failed!");
+            return;
+        }
+        sgpLastMeasurement = now;
+
+        Serial.print("eCO2: ");
+        Serial.print(sgp.eCO2);
+        Serial.println("ppm");
+        Serial.print("TVOC: ");
+        Serial.print(sgp.TVOC);
+        Serial.println("ppb");
+        if ((now - warmupStartTime) >= warmupInterval && !warmupSensorReady){
+            warmupSensorReady = true;
+            Serial.println("Warm-Up finished.");
+        }else if (!warmupSensorReady){
+            Serial.println("Still in Warm-Up...");
+        }
+    }
     //Light Sensor Measurement.
     if (now - lightLastMeasurement >= lightInterval){
         lightLastMeasurement = now;
@@ -131,8 +194,7 @@ void loop() {
         Serial.println(failureCounter);
     }
     float currentDewPoint = computeDewPoint(temperatureCelsius, humidity);
-
-    // Air Quality Measurement.
+    }
 
 
     // iii) TODO: warm-up handling (STATE_INIT for 30 s)
@@ -146,31 +208,6 @@ void loop() {
     // v) TODO: implement LED and buzzer behavior (non-blocking)
 
     // vi) TODO: send BLE telemetry (formatted string, 1 Hz)
+    
 }
 
-uint16_t saadcRawRead(){
-    NRF_SAADC->EVENTS_END = 0;
-    NRF_SAADC->TASKS_START = 1;
-    while(!NRF_SAADC->EVENTS_STARTED);
-    NRF_SAADC->EVENTS_STARTED = 0;
-    NRF_SAADC->TASKS_SAMPLE = 1;
-    while(!NRF_SAADC->EVENTS_END);
-    NRF_SAADC->TASKS_STOP = 1;
-    return adc_result;
-}
-
-const char* categorize(int normalized) {
-    if (normalized < 30){
-        return "LOW";
-    }else if(normalized < 70){
-        return "MEDIUM";
-    }else{
-        return "HIGH";
-    }
-}
-
-float computeDewPoint(float tempC, float relHum) {
-    float gamma = ((a * tempC) / (b + tempC)) + log(relHum / 100);
-    float dewPoint = (b * gamma) / (a - gamma);
-    return dewPoint;
-}
