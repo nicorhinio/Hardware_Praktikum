@@ -139,7 +139,7 @@ void loop() {
 
 
     // Air Quality Measurement.
-    if((now - sgpLastMeasurement) >= sgpInterval){
+    if((now - sgpLastMeasurement) >= sgpInterval && !(currentState == STATE_INIT)){
         if (!sgp.IAQmeasure()) {
             Serial.println("SGP30 measurement failed!");
             return;
@@ -156,7 +156,7 @@ void loop() {
         
     }
     //Light Sensor Measurement.
-    if (now - lightLastMeasurement >= lightInterval){
+    if (now - lightLastMeasurement >= lightInterval && !(currentState == STATE_INIT)){
         lightLastMeasurement = now;
     
         rawValue = saadcRawRead();
@@ -172,7 +172,7 @@ void loop() {
 
     }
     // Temp and Humidity Measurement.
-    if (now - dhtLastMeasurement >= dhtInterval){
+    if (now - dhtLastMeasurement >= dhtInterval && !(currentState == STATE_INIT)){
         dhtLastMeasurement = now;
 
         float humidity = dht_sensor.readHumidity();
@@ -201,6 +201,7 @@ void loop() {
     if (warmingUp){
         currentState = STATE_INIT;
     }else{
+        currentState = STATE_HEALTHY;
         healthEvaluation(lastTemp, lastHum, lastMapping, last_eCO2);
     }
 
