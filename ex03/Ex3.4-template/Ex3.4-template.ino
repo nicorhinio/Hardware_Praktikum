@@ -40,7 +40,7 @@ Adafruit_SGP30 sgp;
 unsigned long sgpLastMeasurement = 0;
 const unsigned long sgpInterval = 1000;
 
-const unsigned long warmupInterval = 15000;
+const unsigned long warmupInterval = 30000;
 unsigned long warmupStartTime = 0;
 bool warmupSensorReady = false;
 // --- Objects ---
@@ -56,6 +56,10 @@ enum SystemState {
 
 SystemState currentState = STATE_INIT;
 
+void healthEvaluation(float temp, float hum, uint16_t light, ){
+
+}
+
 // TODO: define timing variables for asynchronous operation
 
 // TODO: define variables for sensor data storage
@@ -63,6 +67,32 @@ SystemState currentState = STATE_INIT;
 // TODO: helper function(s), e.g.:
 // - state to string conversion
 // - value normalization (light)
+uint16_t saadcRawRead(){
+    NRF_SAADC->EVENTS_END = 0;
+    NRF_SAADC->TASKS_START = 1;
+    while(!NRF_SAADC->EVENTS_STARTED);
+    NRF_SAADC->EVENTS_STARTED = 0;
+    NRF_SAADC->TASKS_SAMPLE = 1;
+    while(!NRF_SAADC->EVENTS_END);
+    NRF_SAADC->TASKS_STOP = 1;
+    return adc_result;
+}
+
+const char* categorize(int normalized) {
+    if (normalized < 30){
+        return "LOW";
+    }else if(normalized < 70){
+        return "MEDIUM";
+    }else{
+        return "HIGH";
+    }
+}
+
+float computeDewPoint(float tempC, float relHum) {
+    float gamma = ((a * tempC) / (b + tempC)) + log(relHum / 100);
+    float dewPoint = (b * gamma) / (a - gamma);
+    return dewPoint;
+}
 
 void setup() {
     Serial.begin(115200);
@@ -89,33 +119,6 @@ void setup() {
     // TODO: initialize BLE and start advertising
 
     // TODO: store system start time (for warm-up)
-}
-
-uint16_t saadcRawRead(){
-    NRF_SAADC->EVENTS_END = 0;
-    NRF_SAADC->TASKS_START = 1;
-    while(!NRF_SAADC->EVENTS_STARTED);
-    NRF_SAADC->EVENTS_STARTED = 0;
-    NRF_SAADC->TASKS_SAMPLE = 1;
-    while(!NRF_SAADC->EVENTS_END);
-    NRF_SAADC->TASKS_STOP = 1;
-    return adc_result;
-}
-
-const char* categorize(int normalized) {
-    if (normalized < 30){
-        return "LOW";
-    }else if(normalized < 70){
-        return "MEDIUM";
-    }else{
-        return "HIGH";
-    }
-}
-
-float computeDewPoint(float tempC, float relHum) {
-    float gamma = ((a * tempC) / (b + tempC)) + log(relHum / 100);
-    float dewPoint = (b * gamma) / (a - gamma);
-    return dewPoint;
 }
 
 void loop() {
