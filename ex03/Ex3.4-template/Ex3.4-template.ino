@@ -23,11 +23,11 @@ uint16_t rawValue = 0;
 int16_t adc_result;
 unsigned long lightLastMeasurement = 0;
 const unsigned long lightInterval = 500;
+uint16_t lastMapping = 0;
 
 
 int TEMP_PIN = 7;
 DHT dht_sensor(TEMP_PIN, SENSOR_TYPE);
-unsigned long lastSample = 0;
 unsigned long dhtLastMeasurement = 0;
 const unsigned long dhtInterval = 2000;
 float lastTemp = 0;
@@ -39,6 +39,7 @@ const float b = 243.12;
 Adafruit_SGP30 sgp;
 unsigned long sgpLastMeasurement = 0;
 const unsigned long sgpInterval = 1000;
+uint16_t last_eCO2 = 0;
 
 const unsigned long warmupInterval = 30000;
 unsigned long warmupStartTime = 0;
@@ -56,7 +57,7 @@ enum SystemState {
 
 SystemState currentState = STATE_INIT;
 
-void healthEvaluation(float temp, float hum, uint16_t light, ){
+void healthEvaluation(float temp, float hum, uint16_t light, uint16_t eCO2){
 
 }
 
@@ -114,7 +115,7 @@ void setup() {
     sgp.begin();
     warmupStartTime = millis();
 
-    // delay(2000); -> warm-up time globally defined, sgp sensor has longest warm-up time, incorrect values are declared as unstable, no need for delay() warmup.
+    // delay(2000); -> warm-up time globally defined, sgp sensor has longest warm-up time, incorrect values are declared as unstable, no need for delay() warm-up.
 
     // TODO: initialize BLE and start advertising
 
@@ -129,9 +130,13 @@ void loop() {
     // i) TODO: asynchronous sensor acquisition (light, DHT, SGP30)
 
     //Warm-up: as long as one sensor unstable, every output is considered unstable.
-    if (!warmupSensorReady){
-        Serial.print("UNSTABLE/WARMUP ");
+    bool warmingUp = (now - warmupStartTime < warmupInterval);
+    if ((now - warmupStartTime) >= warmupInterval && !warmupSensorReady){
+        warmupSensorReady = true;
+        Serial.println("Warm-Up finished.");
     }
+
+
 
     // Air Quality Measurement.
     if((now - sgpLastMeasurement) >= sgpInterval){
@@ -143,16 +148,12 @@ void loop() {
 
         Serial.print("eCO2: ");
         Serial.print(sgp.eCO2);
+        last_eCO2 = sgp.eCO2;
         Serial.println("ppm");
         Serial.print("TVOC: ");
         Serial.print(sgp.TVOC);
         Serial.println("ppb");
-        if ((now - warmupStartTime) >= warmupInterval && !warmupSensorReady){
-            warmupSensorReady = true;
-            Serial.println("Warm-Up finished.");
-        }else if (!warmupSensorReady){
-            Serial.println("Still in Warm-Up...");
-        }
+        
     }
     //Light Sensor Measurement.
     if (now - lightLastMeasurement >= lightInterval){
@@ -169,6 +170,7 @@ void loop() {
         }
         long mapping = map(rawValue, 50, 3500, 0, 100);
         mapping = constrain(mapping, 0, 100);
+        lastMapping = mapping;
 
     }
     // Temp and Humidity Measurement.
@@ -197,6 +199,11 @@ void loop() {
         Serial.println(failureCounter);
     }
     float currentDewPoint = computeDewPoint(temperatureCelsius, humidity);
+    }
+    if (warmingUp){
+        currentState = STATE_INIT;
+    }else{
+        healthEvaluation(lastTemp, lastHum, lastMapping, last_eCO2);
     }
 
 

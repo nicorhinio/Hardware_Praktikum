@@ -3,14 +3,12 @@
 #include <DHT.h>
 #include <math.h>
 #include <Arduino.h>
-#include <Adafruit_TinyUSB.h>
 
 
 // --- Configuration ---
 // TODO: define sensor pin and type (DHT11)
 #define SENSOR_TYPE DHT11
-
-int TEMP_PIN = 7;
+#define TEMP_PIN D7
 // --- Objects ---
 // TODO: create DHT sensor instance
 DHT dht_sensor(TEMP_PIN, SENSOR_TYPE);
