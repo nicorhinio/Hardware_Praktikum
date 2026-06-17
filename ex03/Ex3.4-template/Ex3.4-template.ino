@@ -160,8 +160,6 @@ void loop() {
         lightLastMeasurement = now;
     
         rawValue = saadcRawRead();
-        Serial.print("raw value: ");
-        Serial.println(rawValue);
 
         if (rawValue < 50){
             rawValue = 50;
