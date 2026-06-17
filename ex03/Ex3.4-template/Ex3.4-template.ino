@@ -11,6 +11,7 @@
 // TODO: define pins (DHT, light sensor, LED, buzzer)
 
 #define SENSOR_TYPE DHT11
+#define TEMP_PIN  D7
 
 // --- System Constants ---
 // TODO: define timing constants for:
@@ -26,7 +27,6 @@ const unsigned long lightInterval = 500;
 uint16_t lastMapping = 0;
 
 
-int TEMP_PIN = 7;
 DHT dht_sensor(TEMP_PIN, SENSOR_TYPE);
 unsigned long dhtLastMeasurement = 0;
 const unsigned long dhtInterval = 2000;
