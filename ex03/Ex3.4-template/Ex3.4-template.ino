@@ -58,7 +58,22 @@ enum SystemState {
 SystemState currentState = STATE_INIT;
 
 void healthEvaluation(float temp, float hum, uint16_t light, uint16_t eCO2){
-
+    int points = 0;
+    if(temp >= 18 && temp <= 30){
+        points += 25;
+    }
+    if (hum >= 30 && hum <= 75){
+        points = 25;
+    }
+    if (light <= 90 && light >= 25){
+        points += 25;
+    }
+    if (eCO2 < 1200){
+        points += 25;
+    }
+    else if (eCO2 > 2200){
+        currentState = STATE_STRESSED;
+    }
 }
 
 // TODO: define timing variables for asynchronous operation
