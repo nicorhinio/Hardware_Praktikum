@@ -20,6 +20,10 @@
 // - display refresh (~2 Hz)
 // - BLE transmission (1 Hz)
 // - warm-up duration (30 s)
+
+uint32_t BUZZER_PIN = 29;
+bool buzzerState    = false;
+
 unsigned long ledLastMeasurement = 0;
 bool ledState = false;
 
