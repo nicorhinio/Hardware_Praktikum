@@ -13,6 +13,7 @@
 #define SENSOR_TYPE DHT11
 #define TEMP_PIN  D7
 
+
 // --- System Constants ---
 // TODO: define timing constants for:
 // - sensor sampling
@@ -33,8 +34,6 @@ const unsigned long dhtInterval = 2000;
 float lastTemp = 0;
 float lastHum = 0;
 int failureCounter = 0;
-const float a = 17.62;
-const float b = 243.12;
 
 Adafruit_SGP30 sgp;
 unsigned long sgpLastMeasurement = 0;
@@ -44,8 +43,11 @@ uint16_t last_eCO2 = 0;
 const unsigned long warmupInterval = 30000;
 unsigned long warmupStartTime = 0;
 bool warmupSensorReady = false;
+
 // --- Objects ---
 // TODO: initialize display, sensors, BLE service and characteristic
+
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 
 // --- FSM ---
 enum SystemState {
@@ -63,7 +65,7 @@ void healthEvaluation(float temp, float hum, uint16_t light, uint16_t eCO2){
         points += 25;
     }
     if (hum >= 30 && hum <= 75){
-        points = 25;
+        points += 25;
     }
     if (light <= 90 && light >= 25){
         points += 25;
@@ -72,6 +74,14 @@ void healthEvaluation(float temp, float hum, uint16_t light, uint16_t eCO2){
         points += 25;
     }
     else if (eCO2 > 2200){
+        currentState = STATE_STRESSED;
+        return;
+    }
+    if (points >= 75){
+        currentState = STATE_HEALTHY;
+    } else if(points >= 50){
+        currentState = STATE_ATTENTION;
+    } else{
         currentState = STATE_STRESSED;
     }
 }
@@ -104,10 +114,52 @@ const char* categorize(int normalized) {
     }
 }
 
-float computeDewPoint(float tempC, float relHum) {
-    float gamma = ((a * tempC) / (b + tempC)) + log(relHum / 100);
-    float dewPoint = (b * gamma) / (a - gamma);
-    return dewPoint;
+void displayValues(){
+    u8g2.setFont(u8g2_font_helvB08_tf);
+    u8g2.clearBuffer();
+    u8g2.setCursor(0, 10);
+    u8g2.print("Temperature:  ");
+    u8g2.print(lastTemp);
+    u8g2.print("C");
+    u8g2.setCursor(0, 25);   
+    u8g2.print("Humidity: ");
+    u8g2.print(lastHum);
+    u8g2.print("%");
+    u8g2.setCursor(0, 40);    
+    u8g2.print("Light Level: ");
+    u8g2.print(lastMapping);
+    u8g2.print("%");
+    u8g2.setCursor(0, 55);    
+    u8g2.print("eCO2: ");
+    u8g2.print(last_eCO2);
+    u8g2.print("ppm");
+
+    u8g2.setCursor(75, 55);
+    switch (currentState) {
+    case (STATE_HEALTHY):{
+        u8g2.print("HEALTHY");
+        u8g2.setFont(u8g2_font_unifont_t_symbols);
+        u8g2.setCursor(75, 40);
+        u8g2.drawUTF8(0, 20, "☺");
+        break;
+
+    }
+    case (STATE_ATTENTION):{
+        u8g2.print("ATTENTION");
+        u8g2.setFont(u8g2_font_unifont_t_symbols);
+        u8g2.setCursor(75, 40);
+        u8g2.drawUTF8(0, 40, "☹");
+        break;
+    }
+    case (STATE_STRESSED):{
+        u8g2.print("STRESSED");
+        u8g2.setFont(u8g2_font_unifont_t_symbols);
+        u8g2.setCursor(75, 40);
+        u8g2.drawUTF8(0, 60, "☠");
+        break;
+    }
+    }
+    u8g2.sendBuffer();
 }
 
 void setup() {
@@ -116,6 +168,16 @@ void setup() {
 
     // TODO: initialize hardware (pins, display, sensors)
     Serial.println("Starting...");
+
+    u8g2.begin();
+
+    u8g2.setFont(u8g2_font_helvB08_tf);
+
+    u8g2.clearBuffer();
+
+    u8g2.drawStr(0, 20, "Hardware");
+    u8g2.drawStr(0, 40, "Praktikum 2026");
+    u8g2.sendBuffer();
 
     NRF_SAADC->ENABLE = SAADC_ENABLE_ENABLE_Enabled;
     NRF_SAADC->RESOLUTION = SAADC_RESOLUTION_VAL_12bit;
@@ -160,32 +222,11 @@ void loop() {
             return;
         }
         sgpLastMeasurement = now;
-
-        Serial.print("eCO2: ");
-        Serial.print(sgp.eCO2);
         last_eCO2 = sgp.eCO2;
-        Serial.println("ppm");
-        Serial.print("TVOC: ");
-        Serial.print(sgp.TVOC);
-        Serial.println("ppb");
+
         
     }
-    //Light Sensor Measurement.
-    if (now - lightLastMeasurement >= lightInterval && !(currentState == STATE_INIT)){
-        lightLastMeasurement = now;
-    
-        rawValue = saadcRawRead();
 
-        if (rawValue < 50){
-            rawValue = 50;
-        }else if(rawValue > 3500){
-            rawValue = 3500;
-        }
-        long mapping = map(rawValue, 50, 3500, 0, 100);
-        mapping = constrain(mapping, 0, 100);
-        lastMapping = mapping;
-
-    }
     // Temp and Humidity Measurement.
     if (now - dhtLastMeasurement >= dhtInterval && !(currentState == STATE_INIT)){
         dhtLastMeasurement = now;
@@ -211,10 +252,28 @@ void loop() {
         Serial.print("[WARNING] DHT failures: ");
         Serial.println(failureCounter);
     }
-    float currentDewPoint = computeDewPoint(temperatureCelsius, humidity);
     }
+
+    //Light Sensor Measurement.
+    if (now - lightLastMeasurement >= lightInterval && !(currentState == STATE_INIT)){
+        lightLastMeasurement = now;
+    
+        rawValue = saadcRawRead();
+
+        if (rawValue < 50){
+            rawValue = 50;
+        }else if(rawValue > 3500){
+            rawValue = 3500;
+        }
+        long mapping = map(rawValue, 50, 3500, 0, 100);
+        mapping = constrain(mapping, 0, 100);
+        lastMapping = mapping;
+        displayValues();
+    }
+
     if (warmingUp){
         currentState = STATE_INIT;
+        Serial.println("Warming up...");
     }else{
         currentState = STATE_HEALTHY;
         healthEvaluation(lastTemp, lastHum, lastMapping, last_eCO2);
@@ -228,7 +287,7 @@ void loop() {
     // iii) TODO: implement state transitions (including critical override)
 
     // iv) TODO: update OLED display (~2 Hz)
-
+    
     // v) TODO: implement LED and buzzer behavior (non-blocking)
 
     // vi) TODO: send BLE telemetry (formatted string, 1 Hz)
