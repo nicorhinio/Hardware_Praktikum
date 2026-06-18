@@ -49,6 +49,13 @@ bool warmupSensorReady = false;
 
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 
+// only print if nessecary
+float shownTemp = -999;
+float shownHum = -999;
+uint16_t shownLight = 65535;
+uint16_t shownCO2 = 65535;
+SystemState shownState = STATE_INIT;
+
 // --- FSM ---
 enum SystemState {
     STATE_INIT,
@@ -276,7 +283,22 @@ void loop() {
             currentState = STATE_INIT;
             Serial.println("Warming up...");
         }else{
-            displayValues();
+            bool changed =
+            lastTemp != shownTemp ||
+            lastHum != shownHum ||
+            lastMapping != shownLight ||
+            last_eCO2 != shownCO2 ||
+            currentState != shownState;
+
+            if (changed) {
+                displayValues();
+
+                shownTemp = lastTemp;
+                shownHum = lastHum;
+                shownLight = lastMapping;
+                shownCO2 = last_eCO2;
+                shownState = currentState;
+            }
         }
     }
 
