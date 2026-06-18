@@ -23,6 +23,8 @@
 
 uint32_t BUZZER_PIN = 29;
 bool buzzerState    = false;
+bool overrideAlarmPlayed = false;
+unsigned long buzzerStopTime = 0;
 
 unsigned long ledLastMeasurement = 0;
 bool ledState = false;
@@ -88,7 +90,11 @@ void healthEvaluation(float temp, float hum, uint16_t light, uint16_t eCO2){
     }
     else if (eCO2 > 2200){
         currentState = STATE_STRESSED;
-        setBuzzerFreq(1000);
+        if (!overrideAlarmPlayed){
+            setBuzzerFreq(1000);
+            buzzerStopTime = millis() + 300;
+            overrideAlarmPlayed = true;
+        }
         return;
     }
     if (points >= 75){
@@ -254,6 +260,7 @@ void loop() {
     if ((now - warmupStartTime) >= warmupInterval && !warmupSensorReady){
         warmupSensorReady = true;
         Serial.println("Warm-Up finished.");
+        currentState = STATE_HEALTHY;
     }
 
 
@@ -344,7 +351,7 @@ void loop() {
         digitalWrite(LED_GREEN, LOW);
     }
     else if (currentState == STATE_ATTENTION && now - ledLastMeasurement >= 500){
-        digitalWrite(LED_YELLOW, ledState ? HIGH : LOW);
+        digitalWrite(LED_BLUE, ledState ? HIGH : LOW);
         ledState = !ledState;
         ledLastMeasurement = now;
     }
