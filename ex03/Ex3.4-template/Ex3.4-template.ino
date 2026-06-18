@@ -276,7 +276,6 @@ void loop() {
             currentState = STATE_INIT;
             Serial.println("Warming up...");
         }else{
-            currentState = STATE_HEALTHY;
             displayValues();
         }
     }
