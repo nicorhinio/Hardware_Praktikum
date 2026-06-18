@@ -139,23 +139,20 @@ void displayValues(){
     case (STATE_HEALTHY):{
         u8g2.print("HEALTHY");
         u8g2.setFont(u8g2_font_unifont_t_symbols);
-        u8g2.setCursor(75, 40);
-        u8g2.drawUTF8(0, 20, "☺");
+        u8g2.drawUTF8(75, 40, "☺");
         break;
 
     }
     case (STATE_ATTENTION):{
         u8g2.print("ATTENTION");
         u8g2.setFont(u8g2_font_unifont_t_symbols);
-        u8g2.setCursor(75, 40);
-        u8g2.drawUTF8(0, 40, "☹");
+        u8g2.drawUTF8(75, 40, "☹");
         break;
     }
     case (STATE_STRESSED):{
         u8g2.print("STRESSED");
         u8g2.setFont(u8g2_font_unifont_t_symbols);
-        u8g2.setCursor(75, 40);
-        u8g2.drawUTF8(0, 60, "☠");
+        u8g2.drawUTF8(75, 40, "☠");
         break;
     }
     }
@@ -177,6 +174,7 @@ void setup() {
 
     u8g2.drawStr(0, 20, "Hardware");
     u8g2.drawStr(0, 40, "Praktikum 2026");
+    u8g2.drawStr(0, 60, "Warming up...");
     u8g2.sendBuffer();
 
     NRF_SAADC->ENABLE = SAADC_ENABLE_ENABLE_Enabled;
@@ -216,19 +214,20 @@ void loop() {
 
 
     // Air Quality Measurement.
-    if((now - sgpLastMeasurement) >= sgpInterval && !(currentState == STATE_INIT)){
+    if((now - sgpLastMeasurement) >= sgpInterval){
         if (!sgp.IAQmeasure()) {
             Serial.println("SGP30 measurement failed!");
             return;
         }
         sgpLastMeasurement = now;
         last_eCO2 = sgp.eCO2;
-
-        
+        if (!(currentState == STATE_INIT)){
+        healthEvaluation(lastTemp, lastHum, lastMapping, last_eCO2);
+        }
     }
 
     // Temp and Humidity Measurement.
-    if (now - dhtLastMeasurement >= dhtInterval && !(currentState == STATE_INIT)){
+    if (now - dhtLastMeasurement >= dhtInterval){
         dhtLastMeasurement = now;
 
         float humidity = dht_sensor.readHumidity();
@@ -255,8 +254,8 @@ void loop() {
     }
 
     //Light Sensor Measurement.
-    if (now - lightLastMeasurement >= lightInterval && !(currentState == STATE_INIT)){
-        lightLastMeasurement = now;
+    if (now - lightLastMeasurement >= lightInterval){
+        //lightLastMeasurement = now;
     
         rawValue = saadcRawRead();
 
@@ -268,17 +267,19 @@ void loop() {
         long mapping = map(rawValue, 50, 3500, 0, 100);
         mapping = constrain(mapping, 0, 100);
         lastMapping = mapping;
-        displayValues();
     }
 
-    if (warmingUp){
-        currentState = STATE_INIT;
-        Serial.println("Warming up...");
-    }else{
-        currentState = STATE_HEALTHY;
-        healthEvaluation(lastTemp, lastHum, lastMapping, last_eCO2);
-    }
 
+    if (now - lightLastMeasurement >= lightInterval){
+        lightLastMeasurement = now;
+        if (warmingUp){
+            currentState = STATE_INIT;
+            Serial.println("Warming up...");
+        }else{
+            currentState = STATE_HEALTHY;
+            displayValues();
+        }
+    }
 
     // iii) TODO: warm-up handling (STATE_INIT for 30 s)
 
