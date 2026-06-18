@@ -348,14 +348,23 @@ void loop() {
     }
 
     if(currentState == STATE_HEALTHY){
+        digitalWrite(LED_RED, HIGH);
+        digitalWrite(LED_BLUE, HIGH);
+        
         digitalWrite(LED_GREEN, LOW);
     }
     else if (currentState == STATE_ATTENTION && now - ledLastMeasurement >= 500){
+        digitalWrite(LED_RED, HIGH);
+        digitalWrite(LED_GREEN, HIGH);
+        
         digitalWrite(LED_BLUE, ledState ? HIGH : LOW);
         ledState = !ledState;
         ledLastMeasurement = now;
     }
     else if (currentState == STATE_STRESSED && now - ledLastMeasurement >= 250){
+        digitalWrite(LED_GREEN, HIGH);
+        digitalWrite(LED_BLUE, HIGH);
+        
         digitalWrite(LED_RED, ledState ? HIGH : LOW);
         ledState = !ledState;
         ledLastMeasurement = now;
