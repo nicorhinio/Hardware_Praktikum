@@ -20,6 +20,8 @@
 // - display refresh (~2 Hz)
 // - BLE transmission (1 Hz)
 // - warm-up duration (30 s)
+unsigned long ledLastMeasurement = 0;
+bool ledState = false;
 
 uint16_t rawValue = 0;
 int16_t adc_result;
@@ -54,7 +56,6 @@ float shownTemp = -999;
 float shownHum = -999;
 uint16_t shownLight = 65535;
 uint16_t shownCO2 = 65535;
-SystemState shownState = STATE_INIT;
 
 // --- FSM ---
 enum SystemState {
@@ -65,6 +66,7 @@ enum SystemState {
 };
 
 SystemState currentState = STATE_INIT;
+SystemState shownState = STATE_INIT;
 
 void healthEvaluation(float temp, float hum, uint16_t light, uint16_t eCO2){
     int points = 0;
@@ -82,6 +84,7 @@ void healthEvaluation(float temp, float hum, uint16_t light, uint16_t eCO2){
     }
     else if (eCO2 > 2200){
         currentState = STATE_STRESSED;
+        setBuzzerFreq(1000);
         return;
     }
     if (points >= 75){
@@ -90,6 +93,37 @@ void healthEvaluation(float temp, float hum, uint16_t light, uint16_t eCO2){
         currentState = STATE_ATTENTION;
     } else{
         currentState = STATE_STRESSED;
+    }
+}
+
+
+void setBuzzerFreq(uint32_t freq) {
+  if ((freq > 3000) || (freq < 100)){
+    NRF_TIMER1->TASKS_STOP = 1;
+    NRF_P0->OUTCLR = (1UL << BUZZER_PIN);
+    return;
+  }
+  uint32_t compareValue = 1000000UL / (2 * freq);
+  NRF_TIMER1->CC[0] = compareValue; // Compare Value into Compare Register (CC)
+  NRF_TIMER1->SHORTS = TIMER_SHORTS_COMPARE0_CLEAR_Msk; // Stop Timer and Clear Timer, for compare with index 0 in CC
+  NRF_TIMER1->INTENSET = TIMER_INTENSET_COMPARE0_Msk; // activate Interrupt if Compare0 is reached
+  NVIC_EnableIRQ(TIMER1_IRQn);
+  NRF_TIMER1->TASKS_CLEAR = 1;
+  NRF_TIMER1->TASKS_START = 1;
+}
+
+
+extern "C" void TIMER1_IRQHandler() {
+  if (NRF_TIMER1->EVENTS_COMPARE[0]) // check if compare0 was activated
+    {
+        NRF_TIMER1->EVENTS_COMPARE[0] = 0; // reset Event
+
+        buzzerState = !buzzerState; // switch buzzerstate
+
+        if (buzzerState)
+            NRF_P0->OUTSET = (1UL << BUZZER_PIN);
+        else
+            NRF_P0->OUTCLR = (1UL << BUZZER_PIN);
     }
 }
 
@@ -300,6 +334,20 @@ void loop() {
                 shownState = currentState;
             }
         }
+    }
+
+    if(currentState == STATE_HEALTHY){
+        digitalWrite(LED_GREEN, LOW);
+    }
+    else if (currentState == STATE_ATTENTION && now - ledLastMeasurement >= 500){
+        digitalWrite(LED_YELLOW, ledState ? HIGH : LOW);
+        ledState = !ledState;
+        ledLastMeasurement = now;
+    }
+    else if (currentState == STATE_STRESSED && now - ledLastMeasurement >= 250){
+        digitalWrite(LED_RED, ledState ? HIGH : LOW);
+        ledState = !ledState;
+        ledLastMeasurement = now;
     }
 
     // iii) TODO: warm-up handling (STATE_INIT for 30 s)
