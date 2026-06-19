@@ -13,7 +13,6 @@
 #define SENSOR_TYPE DHT11
 #define TEMP_PIN  D7
 
-
 // --- System Constants ---
 // TODO: define timing constants for:
 // - sensor sampling
@@ -21,10 +20,9 @@
 // - BLE transmission (1 Hz)
 // - warm-up duration (30 s)
 
-uint32_t BUZZER_PIN = 29;
-bool buzzerState    = false;
+int BUZZER_PIN = D3;
 bool overrideAlarmPlayed = false;
-unsigned long buzzerStopTime = 0;
+
 
 unsigned long ledLastMeasurement = 0;
 bool ledState = false;
@@ -35,15 +33,12 @@ unsigned long lightLastMeasurement = 0;
 const unsigned long lightInterval = 500;
 uint16_t lastMapping = 0;
 
-
-DHT dht_sensor(TEMP_PIN, SENSOR_TYPE);
 unsigned long dhtLastMeasurement = 0;
 const unsigned long dhtInterval = 2000;
 float lastTemp = 0;
 float lastHum = 0;
 int failureCounter = 0;
 
-Adafruit_SGP30 sgp;
 unsigned long sgpLastMeasurement = 0;
 const unsigned long sgpInterval = 1000;
 uint16_t last_eCO2 = 0;
@@ -52,10 +47,22 @@ const unsigned long warmupInterval = 30000;
 unsigned long warmupStartTime = 0;
 bool warmupSensorReady = false;
 
+unsigned long bleLastTransmission = 0;
+const unsigned long bleInterval = 1000;
+
+const char* currentStateString = "INIT";
+
 // --- Objects ---
 // TODO: initialize display, sensors, BLE service and characteristic
+Adafruit_SGP30 sgp;
+
+DHT dht_sensor(TEMP_PIN, SENSOR_TYPE);
 
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
+
+BLEService telemetryService("180A");
+BLEStringCharacteristic telemetryChracteristic("2A57", BLERead | BLENotify, 80);
+
 
 // only print if nessecary
 float shownTemp = -999;
@@ -74,6 +81,14 @@ enum SystemState {
 SystemState currentState = STATE_INIT;
 SystemState shownState = STATE_INIT;
 
+
+// TODO: define timing variables for asynchronous operation
+
+// TODO: define variables for sensor data storage
+
+// TODO: helper function(s), e.g.:
+// - state to string conversion
+// - value normalization (light)
 void healthEvaluation(float temp, float hum, uint16_t light, uint16_t eCO2){
     int points = 0;
     if(temp >= 18 && temp <= 30){
@@ -90,60 +105,27 @@ void healthEvaluation(float temp, float hum, uint16_t light, uint16_t eCO2){
     }
     else if (eCO2 > 2200){
         currentState = STATE_STRESSED;
+        currentStateString = "STRESSED";
         if (!overrideAlarmPlayed){
-            setBuzzerFreq(1000);
-            buzzerStopTime = millis() + 300;
+            tone(BUZZER_PIN, 523, 300);
             overrideAlarmPlayed = true;
         }
         return;
     }
     if (points >= 75){
         currentState = STATE_HEALTHY;
+        currentStateString = "HEALTHY";
+        overrideAlarmPlayed = false;
     } else if(points >= 50){
         currentState = STATE_ATTENTION;
+        currentStateString = "ATTENTION";
     } else{
         currentState = STATE_STRESSED;
+        currentStateString = "STRESSED";
     }
 }
 
 
-void setBuzzerFreq(uint32_t freq) {
-  if ((freq > 3000) || (freq < 100)){
-    NRF_TIMER1->TASKS_STOP = 1;
-    NRF_P0->OUTCLR = (1UL << BUZZER_PIN);
-    return;
-  }
-  uint32_t compareValue = 1000000UL / (2 * freq);
-  NRF_TIMER1->CC[0] = compareValue; // Compare Value into Compare Register (CC)
-  NRF_TIMER1->SHORTS = TIMER_SHORTS_COMPARE0_CLEAR_Msk; // Stop Timer and Clear Timer, for compare with index 0 in CC
-  NRF_TIMER1->INTENSET = TIMER_INTENSET_COMPARE0_Msk; // activate Interrupt if Compare0 is reached
-  NVIC_EnableIRQ(TIMER1_IRQn);
-  NRF_TIMER1->TASKS_CLEAR = 1;
-  NRF_TIMER1->TASKS_START = 1;
-}
-
-
-extern "C" void TIMER1_IRQHandler() {
-  if (NRF_TIMER1->EVENTS_COMPARE[0]) // check if compare0 was activated
-    {
-        NRF_TIMER1->EVENTS_COMPARE[0] = 0; // reset Event
-
-        buzzerState = !buzzerState; // switch buzzerstate
-
-        if (buzzerState)
-            NRF_P0->OUTSET = (1UL << BUZZER_PIN);
-        else
-            NRF_P0->OUTCLR = (1UL << BUZZER_PIN);
-    }
-}
-
-// TODO: define timing variables for asynchronous operation
-
-// TODO: define variables for sensor data storage
-
-// TODO: helper function(s), e.g.:
-// - state to string conversion
-// - value normalization (light)
 uint16_t saadcRawRead(){
     NRF_SAADC->EVENTS_END = 0;
     NRF_SAADC->TASKS_START = 1;
@@ -215,12 +197,15 @@ void setup() {
     while (!Serial && millis() < 3000);
 
     // TODO: initialize hardware (pins, display, sensors)
+    // NRF_P0->DIRSET = (1UL << BUZZER_PIN);
+
+    pinMode(BUZZER_PIN, OUTPUT);
+
+
     Serial.println("Starting...");
 
     u8g2.begin();
-
     u8g2.setFont(u8g2_font_helvB08_tf);
-
     u8g2.clearBuffer();
 
     u8g2.drawStr(0, 20, "Hardware");
@@ -241,18 +226,35 @@ void setup() {
     sgp.begin();
     warmupStartTime = millis();
 
-    // delay(2000); -> warm-up time globally defined, sgp sensor has longest warm-up time, incorrect values are declared as unstable, no need for delay() warm-up.
-
     // TODO: initialize BLE and start advertising
+
+    if (!BLE.begin()){
+        Serial.println("BLE failed.");
+    }
+
+    BLE.setLocalName("PlantMonitoringStation");
+    BLE.setDeviceName("PlantMonitoringStation");
+    BLE.setAdvertisedService(telemetryService);
+
+    telemetryService.addCharacteristic(telemetryChracteristic);
+
+    BLE.addService(telemetryService);
+
+    telemetryChracteristic.writeValue("T=0 H=0 L=0 C=0 S=INIT");
+
+    BLE.advertise();
+
+    Serial.println("BLE started advertising...");
 
     // TODO: store system start time (for warm-up)
 }
 
 void loop() {
+    
     unsigned long now = millis();
 
     // TODO: maintain BLE stack (if required)
-
+    BLE.poll();
     // i) TODO: asynchronous sensor acquisition (light, DHT, SGP30)
 
     //Warm-up: as long as one sensor unstable, every output is considered unstable.
@@ -381,6 +383,13 @@ void loop() {
     // v) TODO: implement LED and buzzer behavior (non-blocking)
 
     // vi) TODO: send BLE telemetry (formatted string, 1 Hz)
-    
+    if ((now - bleLastTransmission) >= bleInterval){
+        bleLastTransmission = now;
+        char telemetry[80];
+
+        snprintf(telemetry, sizeof(telemetry), "T=%.1f H=%.1f L=%u C=%u S=%s", lastTemp, lastHum, lastMapping, last_eCO2, currentStateString);
+        telemetryChracteristic.writeValue(telemetry);
+        Serial.println(telemetry);
+    }
 }
 
