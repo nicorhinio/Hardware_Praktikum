@@ -15,9 +15,16 @@
 // =====================
 // Part E: BLE Library
 // =====================
-// #include <ArduinoBLE.h>
+#include <ArduinoBLE.h>
+
+unsigned long bleLastTransmission = 0;
+const unsigned long bleInterval = 1000;
+
+BLEService telemetryService("180A");
+BLEStringCharacteristic telemetryChracteristic("2A57", BLERead | BLENotify, 80);
 
 LSM6DS3 myIMU(I2C_MODE, 0x6A);
+
 
 // Constants
 #define CONVERT_G_TO_MS2 9.80665f
@@ -61,8 +68,18 @@ String detectOrientation(float ax, float ay, float az) {
 
   // TODO: Detect device orientation from accelerometer
   // Use thresholds on ay and az axes
-
-  return "UNKNOWN";
+  String orientation = "UNKNOWN";
+  if (az > 0.7){
+    orientation = "FACE UP";
+  } else if (az < 0.7){
+    orientation = "FACE DOWN";
+  } else if (ay > 0.7){
+    orientation = "LEFT";
+  }else if (ay < 0.7){
+    orientation = "RIGHT";
+  }
+  Serial.print("ORIENTATION: ");
+  Serial.println(orientation);
 }
 
 
@@ -132,21 +149,24 @@ void setup() {
 void loop() {
   if (millis() > last_interval_ms + INTERVAL_MS) {
     last_interval_ms = millis();
-
+  
+    BLE.poll();
     // =====================
     // Part A: IMU Data Acquisition
     // =====================
     // TODO: Read accelerometer (ax, ay, az) from myIMU
+
     // TODO: Convert accelerometer from G to m/s² using CONVERT_G_TO_MS2
+
     // TODO: Read gyroscope (gyrX, gyrY, gyrZ) from myIMU
 
-    float ax;  // TODO
-    float ay;  // TODO
-    float az;  // TODO
+    float ax = myIMU.readFloatAccelX() * CONVERT_G_TO_MS2;  // TODO
+    float ay = myIMU.readFloatAccelY() * CONVERT_G_TO_MS2;  // TODO
+    float az = myIMU.readFloatAccelZ() * CONVERT_G_TO_MS2;  // TODO
 
-    float gyrX;  // TODO
-    float gyrY;  // TODO
-    float gyrZ;  // TODO
+    float gyrX = myIMU.readFloatGyroX();  // TODO
+    float gyrY = myIMU.readFloatGyroY();  // TODO
+    float gyrZ = myIMU.readFloatGyroZ();  // TODO
 
 
     // =====================
@@ -210,5 +230,13 @@ void loop() {
     // - Gyroscope readings (gyrX, gyrY, gyrZ)
     // - Orientation detection result
     // - Gesture detection results (FSM and Gyro)
+    if ((now - bleLastTransmission) >= bleInterval){
+      bleLastTransmission = now;
+      char telemetry[80];
+
+      snprintf(telemetry, sizeof(telemetry), "ax: %.1f | ay: %.1f | az: %u | gyrX: %u | gyrY: %s | gyrZ: % | Orientation: % | Accelerometer Gesture: % | Gyro Gesture: %", ax, ay, az, gyrX, gyrY, gyrZ, orientation, lastDetectedGesture lastDynamicGesture);
+      telemetryChracteristic.writeValue(telemetry);
+      Serial.println(telemetry);
+    }
   }
 }
