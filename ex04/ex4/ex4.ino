@@ -17,11 +17,7 @@
 // =====================
 #include <ArduinoBLE.h>
 
-unsigned long bleLastTransmission = 0;
-const unsigned long bleInterval = 1000;
 
-BLEService telemetryService("180A");
-BLEStringCharacteristic telemetryChracteristic("2A57", BLERead | BLENotify, 80);
 
 LSM6DS3 myIMU(I2C_MODE, 0x6A);
 
@@ -30,6 +26,7 @@ LSM6DS3 myIMU(I2C_MODE, 0x6A);
 #define CONVERT_G_TO_MS2 9.80665f
 #define FREQUENCY_HZ 50
 #define INTERVAL_MS (1000 / (FREQUENCY_HZ + 1))
+#define WINDOW_SIZE 25
 
 static unsigned long last_interval_ms = 0;
 
@@ -59,7 +56,11 @@ bool buffer_full = false;
 // Example:
 // BLEService imuService("180C");
 // BLECharacteristic imuCharacteristic("2A56", BLERead | BLENotify, 100);
+unsigned long bleLastTransmission = 0;
+const unsigned long bleInterval = 1000;
 
+BLEService telemetryService("180A");
+BLEStringCharacteristic telemetryChracteristic("2A57", BLERead | BLENotify, 80);
 
 // =====================
 // Part B: Orientation Detection
@@ -78,8 +79,7 @@ String detectOrientation(float ax, float ay, float az) {
   }else if (ay < 0.7){
     orientation = "RIGHT";
   }
-  Serial.print("ORIENTATION: ");
-  Serial.println(orientation);
+  return orientation;
 }
 
 
@@ -90,7 +90,29 @@ String detectGestureWindow() {
 
   // TODO: Detect SUPINATION/PRONATION from Z-axis acceleration buffer
   // Analyze min/max range and motion direction
-  
+
+  float minAZ = az_buffer[0];
+  float maxAZ = az_buffer[0];
+
+  for(int i = 1; i < WINDOW_SIZE; i++){
+    if(az_buffer[i] < minAZ){
+      minAZ = az_buffer[i];
+    }
+    if(az_buffer[i] > maxAZ){
+      maxAZ = az_buffer[i];
+    }
+  }
+
+  float range = maxAZ - minAZ;
+  if(range < 1.2){return "NONE";}
+
+  float first = az_buffer[0];
+  float last = az_buffer[WINDOW_SIZE - 1];
+
+  if(first > 0.5 && last < -0.5){return "SUPINATION";}
+
+  if(first < -0.5 && last > 0.5){return "PRONATION";}
+
   return "NONE";
 }
 
@@ -148,6 +170,7 @@ void setup() {
 
 void loop() {
   if (millis() > last_interval_ms + INTERVAL_MS) {
+    unsigned long now = millis();
     last_interval_ms = millis();
   
     BLE.poll();
