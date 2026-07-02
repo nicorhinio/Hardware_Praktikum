@@ -90,7 +90,7 @@ String detectGestureWindow() {
 
   // TODO: Detect SUPINATION/PRONATION from Z-axis acceleration buffer
   // Analyze min/max range and motion direction
-
+  
   return "NONE";
 }
 
